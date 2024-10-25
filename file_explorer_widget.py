@@ -8,16 +8,24 @@ from PyQt5.QtCore import Qt, QDir
 from PyQt5.QtGui import QIcon
 
 class FileExplorerWidget(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, simple_ide):
+        super().__init__()
+        self.simple_ide = simple_ide
         self.setMinimumWidth(250)
-        self.setup_ui()
+        self.setup_ui("")
+
+    def update_ui(self,updated_path):
+        self.model.setRootPath(updated_path)
+        self.tree_view.setRootIndex(self.model.index(updated_path))
         
-    def setup_ui(self):
+    def onExplorerClicked(self, index):
+        path = self.sender().model().filePath(index)
+        self.simple_ide.add_file_to_tabs(path)
+
+    def setup_ui(self,path_to_show):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        
         # Header
         header = QWidget()
         header.setFixedHeight(30)
@@ -38,6 +46,7 @@ class FileExplorerWidget(QWidget):
         
         # Tree View
         self.tree_view = QTreeView()
+        self.tree_view.clicked.connect(self.onExplorerClicked)
         self.tree_view.setStyleSheet("""
             QTreeView {
                 background-color: #2C2D3A;
@@ -79,8 +88,9 @@ class FileExplorerWidget(QWidget):
         """)
         
         # File System Model
+        
         self.model = QFileSystemModel()
-        self.model.setRootPath(QDir.currentPath())
+        self.model.setRootPath(path_to_show)#
         
         # Custom File System Model per le icone personalizzate
         class CustomFileSystemModel(QFileSystemModel):
@@ -92,11 +102,12 @@ class FileExplorerWidget(QWidget):
                     else:
                         return QIcon("img/file.svg")
                 return super().data(index, role)
-        
+        '''
         self.model = CustomFileSystemModel()
         self.model.setRootPath(QDir.currentPath())
+        '''
         self.tree_view.setModel(self.model)
-        self.tree_view.setRootIndex(self.model.index(QDir.currentPath()))
+        self.tree_view.setRootIndex(self.model.index(path_to_show))
         
         # Nascondi le colonne non necessarie
         for i in range(1, 4):
@@ -108,8 +119,7 @@ class FileExplorerWidget(QWidget):
         self.tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_view.customContextMenuRequested.connect(self.show_context_menu)
         
-        # Connetti il segnale di doppio click
-        self.tree_view.doubleClicked.connect(self.open_file)
+
         
     def show_context_menu(self, position):
         menu = QMenu()
@@ -153,6 +163,7 @@ class FileExplorerWidget(QWidget):
         if ok and name:
             file_path = os.path.join(current_path, name)
             with open(file_path, 'w') as f:
+                self.simple_ide.add_file_to_tabs(file_path)
                 pass
             
     def create_new_folder(self):
@@ -190,10 +201,3 @@ class FileExplorerWidget(QWidget):
             else:
                 os.remove(path)
                 
-    def open_file(self, index):
-        path = self.model.filePath(index)
-        if os.path.isfile(path):
-            # Qui dovresti emettere un segnale per aprire il file nell'editor
-            # O chiamare direttamente il metodo dell'IDE per aprire il file
-            if hasattr(self.parent(), 'open_file'):
-                self.parent().open_file(path)
