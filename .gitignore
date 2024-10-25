@@ -1,5 +1,5 @@
 # Ignora file e cartelle generati da Python
-__pycache__/
+__pycache__
 *.pyc
 *.pyo
 .pytest_cache/
