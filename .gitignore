@@ -1,3 +1,26 @@
-bin
-obj
-path/to/your/whisper/model
+# Ignora file e cartelle generati da Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Ignora file di cache e temporanei
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.bak
+*.old
+
+# Ignora file di configurazione specifici per l'editor
+# Aggiungi qui gli altri editor che utilizzi (es: Sublime Text, VS Code)
+.idea/
+.vscode/
+
+# Ignora la cartella del modello e tutto ciò che inizia con "models"
+models
+
+# Ignora file di output specifici
+# (Aggiungi qui altri file di output che il tuo progetto genera)
+*.out
+*.log
