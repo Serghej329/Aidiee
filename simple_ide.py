@@ -20,9 +20,23 @@ from animated_circle_button import AnimatedCircleButton  # Salva il codice dell'
 from file_explorer_widget import FileExplorerWidget
 from tabs_dictionary import tabs_dictionary
 
+
 # Ottieni il percorso relativo della cartella img
 current_dir = os.path.dirname(os.path.abspath(__file__))
 img_dir = os.path.join(current_dir, 'img')
+
+#TODO - Settings tab, per impostazione dell'assistente vocale e implementazioni future
+#               NOTA: per il tipo di modello indicare se è già installato o necessita installazione
+#               NOTA_2: dopo ogni modifica dei parametri dell'assistente vocale è necessario fare il restart
+
+#FIXME - Aggiustare funzionamento della finestra e dei sui controlli (attualmente minimizza ed espandi non sono funzionanti), anche il drag della finestra non è funzionante
+
+#FIXME - Ri-aggiungere la possibilità di ridimensionare il dock-widget 
+
+
+class CreateStartWindow():
+    def __init__(self):
+        super().__init__()  
 
 class DetectorThread(QThread):
     keyword_detected = pyqtSignal()
@@ -264,7 +278,7 @@ class CodeEditorWidget(QWidget):
         """)
 
 class SimpleIDE(QMainWindow):
-    def __init__(self):
+    def __init__(self, project_path):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setStyleSheet("QMainWindow::separator{ width: 0px; height: 0px; }")

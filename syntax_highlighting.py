@@ -5,6 +5,9 @@ from pygments.formatter import Formatter
 from pygments.styles import get_style_by_name
 from pygments.token import Token
 
+#TODO Implementare diversi lexers per sperimentare con diversi linguaggi di programmazione
+#              Lexer attualmente funzionanti: Python.
+
 class PygmentsFormatter(Formatter):
     def __init__(self, highlighter, style_name='monokai'):
         super().__init__()

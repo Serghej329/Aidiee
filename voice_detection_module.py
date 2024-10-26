@@ -6,7 +6,7 @@ import torch
 import whisper
 
 class CombinedDetector:
-    def __init__(self, rate=16000, chunk_size=1280, silence_threshold=-50, silence_duration=1.2, history_s=0.5, max_buffer_s=300, language = "it", whisper_model_dir = r"C:/Users/ivald/Desktop/Informatica/prova2/models", whisper_model_version="medium"):
+    def __init__(self, rate=16000, chunk_size=1280, silence_threshold=-50, silence_duration=1.2, history_s=0.5, max_buffer_s=300, language = "it", whisper_model_dir = r"C:/Users/ivald/Desktop/Informatica/Voice Detection V2/models", whisper_model_version="base"):
         self.rate = rate
         self.chunk_size = chunk_size
         self.silence_threshold = silence_threshold
@@ -40,7 +40,7 @@ class CombinedDetector:
         self.silence_detected = threading.Event()
 
         # Initialize OpenWakeWord model
-        self.oww_model = Model(wakeword_models=["C:/Users/ivald/Desktop/Informatica/prova2/alexa_v0.1.onnx"], inference_framework="onnx")
+        self.oww_model = Model(wakeword_models=["C:/Users/ivald/Desktop/Informatica/Voice Detection V2/Voice Detection V2/alexa_v0.1.onnx"], inference_framework="onnx")
     
     def get_db(self, audio_data):
         if audio_data.dtype == np.int16:
@@ -79,6 +79,7 @@ class CombinedDetector:
                 print(f"Error in detect_keyword_and_silence: {e}")
                 self.stop()
 
+#TODO 
     def start(self):
         self.running = True
         self.thread = threading.Thread(target=self.detect_keyword_and_silence)
@@ -92,13 +93,20 @@ class CombinedDetector:
     
     def stop(self):
         self.running = False
-        if self.thread:
-            self.thread.join()
-        self.reset_buffer()
         try:
+            
+            # if self.thread:
+            #     self.thread.join()
+            self.reset_buffer()
+        except Exception as e:
+            print(f"Error before stop: {e}")
+            
+        try:
+            
             self.stream.stop_stream()
             self.stream.close()
             self.audio.terminate()
+        
         except Exception as e:
             print(f"Error during stop: {e}")
 
@@ -120,7 +128,7 @@ class CombinedDetector:
         # Convert audio to float32 in range [-1.0, 1.0]
         audio = audio.astype(np.float32) / 32768.0
         # Perform transcription
-        result = self.whisper_model.transcribe(audio, language=self.transcription_language, fp16=self.device == "cuda")
+        result = self.whisper_model.transcribe(audio, language=self.transcription_language, fp16=self.device == "cuda", task = "translate")
         return result["text"]
 
 '''

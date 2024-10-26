@@ -7,6 +7,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QDir
 from PyQt5.QtGui import QIcon
 
+#TODO Implementazione dei progetti con tutti i path dei vari .proj.json files salvati in un projects.json
+
+#TODO La cartella selezionata nel file explorer dovrebbe cambiare se si cambiano le tab (necessarie modifiche anche al file "tab_dictionary.py")
+
 class FileExplorerWidget(QWidget):
     def __init__(self, simple_ide):
         super().__init__()

@@ -18,7 +18,7 @@ Thumbs.db
 .vscode/
 
 # Ignora la cartella del modello e tutto ciò che inizia con "models"
-models
+models/*.pt
 
 # Ignora file di output specifici
 # (Aggiungi qui altri file di output che il tuo progetto genera)
