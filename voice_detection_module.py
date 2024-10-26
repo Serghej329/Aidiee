@@ -4,9 +4,14 @@ import threading
 from openwakeword.model import Model
 import torch
 import whisper
+import os
+
+
+#FIXME - FutureWarning: You are using `torch.load` with `weights_only=False`
+#               Refer to : https://github.com/JaidedAI/EasyOCR/issues/1297
 
 class CombinedDetector:
-    def __init__(self, rate=16000, chunk_size=1280, silence_threshold=-50, silence_duration=1.2, history_s=0.5, max_buffer_s=300, language = "it", whisper_model_dir = r"C:/Users/ivald/Desktop/Informatica/prova2/models", whisper_model_version="medium"):
+    def __init__(self, rate=16000, chunk_size=1280, silence_threshold=-50, silence_duration=1.2, history_s=0.5, max_buffer_s=300, language = "it", whisper_model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models"), whisper_model_version="medium"):
         self.rate = rate
         self.chunk_size = chunk_size
         self.silence_threshold = silence_threshold
@@ -40,11 +45,13 @@ class CombinedDetector:
         self.silence_detected = threading.Event()
 
         # Initialize OpenWakeWord model
-        self.oww_model = Model(wakeword_models=["C:/Users/ivald/Desktop/Informatica/prova2/alexa_v0.1.onnx"], inference_framework="onnx")
+        self.oww_model = Model(wakeword_models=[os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "alexa_v0.1.onnx")], inference_framework="onnx")    
+
     
     def get_db(self, audio_data):
         if audio_data.dtype == np.int16:
-            audio_data = audio_data.astype(np.float32) / 32768.0 #Convert audio from int16 to float32 and normalize to float values between -1.0 and +1.0
+            #Convert audio from int16 to float32 and normalize to float values between -1.0 and +1.0
+            audio_data = audio_data.astype(np.float32) / 32768.0 
         return 20 * np.log10(np.sqrt(np.mean(np.square(audio_data))) + 1e-10)
     
     def is_silent(self, audio_data):
@@ -80,7 +87,7 @@ class CombinedDetector:
                 self.stop()
 
     def start(self):
-        self.running = True
+        self.running = True     #thread running state, change to false to stop execution of the main loop
         self.thread = threading.Thread(target=self.detect_keyword_and_silence)
         self.audio = pyaudio.PyAudio()
         self.stream = self.audio.open(format=pyaudio.paInt16,

@@ -24,6 +24,14 @@ from tabs_dictionary import tabs_dictionary
 current_dir = os.path.dirname(os.path.abspath(__file__))
 img_dir = os.path.join(current_dir, 'img')
 
+#TODO - Settings tab, per impostazione dell'assistente vocale e implementazioni future
+#               NOTA: per il tipo di modello indicare se è già installato o necessita installazione
+#               NOTA_2: dopo ogni modifica dei parametri dell'assistente vocale è necessario fare il restart
+
+#FIXME - Aggiustare funzionamento della finestra e dei sui controlli (attualmente minimizza ed espandi non sono funzionanti), anche il drag della finestra non è funzionante
+
+#FIXME - Ri-aggiungere la possibilità di ridimensionare il dock-widget 
+
 class DetectorThread(QThread):
     keyword_detected = pyqtSignal()
     silence_detected = pyqtSignal()
