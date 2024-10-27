@@ -277,13 +277,6 @@ class CodeEditorWidget(QWidget):
             }
         """)
 
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QSplitter, QTabWidget, QFileDialog, QDockWidget, QLabel, QPushButton, QScrollArea, QHBoxLayout, QApplication
-from PyQt5.QtCore import Qt
-import os
-import json
-import ctypes
-import sys
-
 class SimpleIDE(QMainWindow):
     def __init__(self, project_path):
         super().__init__()
@@ -410,6 +403,7 @@ class SimpleIDE(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        
 
         # Calculate dynamic height for the button container
         frame_height = self.height() * 0.08
@@ -446,9 +440,9 @@ class SimpleIDE(QMainWindow):
         
         self.dock_widget.setStyleSheet("""
             QDockWidget {
-                background-color: #FF0000;
+                background-color: #2C2D3A;
                 color: #E0E0E0;
-                border: none;
+                border: 1px solid;
             }
             QDockWidget::title {
                 background-color: #2C2D3A;

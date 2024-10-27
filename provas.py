@@ -1,60 +1,13 @@
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QLabel, QLineEdit, QPushButton, 
-                           QTreeWidget, QTreeWidgetItem)
-from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QIcon, QFont, QPainter, QPen, QColor, QLinearGradient
+                           QTreeWidget, QTreeWidgetItem, QStyleOption, QStyle)
+from PyQt5.QtCore import Qt, QPoint, QPointF
+from PyQt5.QtGui import QIcon, QFont, QPainter, QPen, QColor, QLinearGradient, QPolygonF
 import sys
 
 from simple_ide import SimpleIDE
+from neumorphic_widgets import NeumorphicWidget, NeumorphicButton
 
-class NeumorphicWidget(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setAutoFillBackground(True)
-        
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        bg_color = QColor("#2C2D3A")
-        dark_shadow = bg_color.darker(130)
-        light_shadow = bg_color.lighter(110)
-        
-        gradient = QLinearGradient(0, 0, self.width(), self.height())
-        gradient.setColorAt(0, bg_color.lighter(105))
-        gradient.setColorAt(1, bg_color)
-        
-        painter.setBrush(gradient)
-        painter.setPen(Qt.NoPen)
-        painter.drawRoundedRect(self.rect(), 10, 10)
-        
-        painter.setPen(QPen(dark_shadow, 2))
-        painter.drawLine(self.rect().topLeft() + QPoint(5, 5),
-                        self.rect().bottomLeft() + QPoint(5, -5))
-        painter.drawLine(self.rect().topLeft() + QPoint(5, 5),
-                        self.rect().topRight() + QPoint(-5, 5))
-        
-        painter.setPen(QPen(light_shadow, 2))
-        painter.drawLine(self.rect().bottomLeft() + QPoint(5, -5),
-                        self.rect().bottomRight() + QPoint(-5, -5))
-        painter.drawLine(self.rect().topRight() + QPoint(-5, 5),
-                        self.rect().bottomRight() + QPoint(-5, -5))
-
-class NeumorphicButton(QPushButton):
-    def __init__(self, text, parent=None):
-        super().__init__(text, parent)
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: #2C2D3A;
-                color: #E0E0E0;
-                border: none;
-                border-radius: 10px;
-                padding: 10px;
-                text-align: left;
-            }
-            QPushButton:hover {
-                background-color: #3D3E4D;
-            }
-        """)
 
 class VSCodeClone(QMainWindow):
     def __init__(self):
@@ -72,14 +25,12 @@ class VSCodeClone(QMainWindow):
                 background-color: #2C2D3A;
                 color: #E0E0E0;
                 border: none;
-                border-radius: 10px;
                 padding: 8px;
             }
             QTreeWidget {
                 background-color: #2C2D3A;
                 color: #E0E0E0;
                 border: none;
-                border-radius: 10px;
             }
             QTreeWidget::item {
                 padding: 5px;
@@ -89,13 +40,13 @@ class VSCodeClone(QMainWindow):
             }
         """)
         
-        # Central widget with neumorphic style
-        central_widget = NeumorphicWidget()
+        # Central widget
+        central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout(central_widget)
         
         # Left panel
-        left_panel = NeumorphicWidget()
+        left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
         
         # Recent section
@@ -122,7 +73,7 @@ class VSCodeClone(QMainWindow):
         left_layout.addStretch()
         
         # Right panel
-        right_panel = NeumorphicWidget()
+        right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         
         # Start section
@@ -147,7 +98,7 @@ class VSCodeClone(QMainWindow):
         right_layout.addStretch()
         
         # Continue without code button
-        continue_button = NeumorphicButton("Continua senza codice →")
+        continue_button = NeumorphicButton("Continua senza codice")
         continue_button.clicked.connect(self.open_main_window)
         continue_button.setStyleSheet(continue_button.styleSheet() + "text-align: right;")
         right_layout.addWidget(continue_button)
@@ -162,5 +113,18 @@ class VSCodeClone(QMainWindow):
         self.main_window = SimpleIDE(project_path)  # Your existing main window class
         self.main_window.showMaximized()  # Imposta la finestra a full size di default
         self.close()
-        
 
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(QPen(QColor("#E0E0E0"), 2))
+        painter.setBrush(QColor("#E0E0E0"))
+        
+        # Draw diamond icon
+        diamond = QPolygonF()
+        diamond.append(QPointF(self.width() - 30, self.height() - 30))
+        diamond.append(QPointF(self.width() - 20, self.height() - 30))
+        diamond.append(QPointF(self.width() - 25, self.height() - 20))
+        diamond.append(QPointF(self.width() - 30, self.height() - 30))
+        painter.drawPolygon(diamond)

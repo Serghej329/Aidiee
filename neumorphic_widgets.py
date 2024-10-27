@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QComboBox, QTextEdit
+from PyQt5.QtWidgets import QWidget, QComboBox, QTextEdit, QPushButton
 from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QPainter, QPen, QColor, QLinearGradient
+from PyQt5.QtGui import QPainter, QPen, QColor, QLinearGradient, QIcon
 
 class NeumorphicWidget(QWidget):
     def __init__(self, parent=None):
@@ -43,7 +43,7 @@ class NeumorphicComboBox(QComboBox):
         self.setStyleSheet("""
             QComboBox {
                 background-color: #2C2D3A;
-                border-radius: 5px;
+                border: none;
                 padding: 5px;
                 color: #E0E0E0;
             }
@@ -63,5 +63,23 @@ class NeumorphicTextEdit(QTextEdit):
                 border: none;
                 padding: 10px;
                 color: #E0E0E0;
+            }
+        """)
+        
+        
+        
+class NeumorphicButton(QPushButton):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: #2C2D3A;
+                color: #E0E0E0;
+                border: none;
+                padding: 10px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #3D3E4D;
             }
         """)
