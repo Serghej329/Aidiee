@@ -277,6 +277,13 @@ class CodeEditorWidget(QWidget):
             }
         """)
 
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QSplitter, QTabWidget, QFileDialog, QDockWidget, QLabel, QPushButton, QScrollArea, QHBoxLayout, QApplication
+from PyQt5.QtCore import Qt
+import os
+import json
+import ctypes
+import sys
+
 class SimpleIDE(QMainWindow):
     def __init__(self, project_path):
         super().__init__()
@@ -311,15 +318,12 @@ class SimpleIDE(QMainWindow):
             QTabWidget::pane {
                 border: none;
                 background-color: #2C2D3A;
-                border-radius: 10px;
                 padding: 5px;
             }
             QTabBar::tab {
                 background-color: #2C2D3A;
                 color: #E0E0E0;
                 border: none;
-                border-top-left-radius: 10px;
-                border-top-right-radius: 10px;
                 padding: 10px;
                 margin-right: 5px;
                 border-bottom: 2px solid #1E1F2B;
@@ -442,7 +446,7 @@ class SimpleIDE(QMainWindow):
         
         self.dock_widget.setStyleSheet("""
             QDockWidget {
-                background-color: #2C2D3A;
+                background-color: #FF0000;
                 color: #E0E0E0;
                 border: none;
             }
@@ -476,7 +480,6 @@ class SimpleIDE(QMainWindow):
             QTextEdit {
                 background-color: #1E1F2B;
                 border: none;
-                border-radius: 5px;
                 padding: 8px;
                 color: #E0E0E0;
             }
@@ -490,7 +493,6 @@ class SimpleIDE(QMainWindow):
                 background-color: #2C2D3A;
                 color: #E0E0E0;
                 border: none;
-                border-radius: 5px;
                 padding: 8px 16px;
                 margin: 2px;
             }
@@ -554,6 +556,23 @@ class SimpleIDE(QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock_widget)
         self.dock_widget.hide()
 
+    def update_dock_widget_style(self, dock_area):
+        screen_size = QApplication.desktop().screenGeometry()
+        if self.dock_widget.isFloating():
+            # Dimensioni quadrate prestabilite per la modalità floating
+            square_size = 300  # Puoi cambiare questo valore a seconda delle tue esigenze
+            self.dock_widget.setFixedSize(square_size, square_size)
+        else:
+            if dock_area == Qt.TopDockWidgetArea:
+                self.dock_widget.setFixedHeight(screen_size.height() // 4)
+                self.dock_widget.setFixedWidth(screen_size.width())
+            elif dock_area == Qt.BottomDockWidgetArea:
+                self.dock_widget.setFixedHeight(screen_size.height() // 4)
+                self.dock_widget.setFixedWidth(screen_size.width())
+            elif dock_area == Qt.LeftDockWidgetArea or dock_area == Qt.RightDockWidgetArea:
+                self.dock_widget.setFixedHeight(screen_size.height())
+                self.dock_widget.setFixedWidth(screen_size.width() // 4)
+                
     def start_detector(self):
         self.detector_thread = DetectorThread(self.detector)
         self.detector_thread.keyword_detected.connect(self.on_keyword_detected)
@@ -614,29 +633,13 @@ class SimpleIDE(QMainWindow):
             self.dock_widget.hide()
         else:
             self.dock_widget.show()
+            
 
     def change_style(self, style_name="monokai"):
         self.current_style = style_name
         for index in range(self.tab_widget.count()):
             editor_widget = self.tab_widget.widget(index)
             editor_widget.set_style(style_name)
-
-    def update_dock_widget_style(self, dock_area):
-        screen_size = QApplication.desktop().screenGeometry()
-        if self.dock_widget.isFloating():
-            # Dimensioni quadrate prestabilite per la modalità floating
-            square_size = 300  # Puoi cambiare questo valore a seconda delle tue esigenze
-            self.dock_widget.setFixedSize(square_size, square_size)
-        else:
-            if dock_area == Qt.TopDockWidgetArea:
-                self.dock_widget.setFixedHeight(screen_size.height() // 4)
-                self.dock_widget.setFixedWidth(screen_size.width())
-            elif dock_area == Qt.BottomDockWidgetArea:
-                self.dock_widget.setFixedHeight(screen_size.height() // 4)
-                self.dock_widget.setFixedWidth(screen_size.width())
-            elif dock_area == Qt.LeftDockWidgetArea or dock_area == Qt.RightDockWidgetArea:
-                self.dock_widget.setFixedHeight(screen_size.height())
-                self.dock_widget.setFixedWidth(screen_size.width() // 4)
 
     def open_project(self,):
         project_folder = None

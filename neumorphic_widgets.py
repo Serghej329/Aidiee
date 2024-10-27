@@ -21,7 +21,7 @@ class NeumorphicWidget(QWidget):
 
         painter.setBrush(gradient)
         painter.setPen(Qt.NoPen)
-        painter.drawRoundedRect(self.rect(), 10, 10)
+        painter.drawRect(self.rect())
 
         painter.setPen(QPen(dark_shadow, 2))
         painter.drawLine(self.rect().topLeft() + QPoint(5, 5), 
@@ -43,8 +43,7 @@ class NeumorphicComboBox(QComboBox):
         self.setStyleSheet("""
             QComboBox {
                 background-color: #2C2D3A;
-                border: none;
-                border-radius: 10px;
+                border-radius: 5px;
                 padding: 5px;
                 color: #E0E0E0;
             }
@@ -52,8 +51,6 @@ class NeumorphicComboBox(QComboBox):
                 width: 30px;
                 border: none;
                 background: #3D3E4D;
-                border-top-right-radius: 10px;
-                border-bottom-right-radius: 10px;
             }
         """)
 
@@ -64,10 +61,7 @@ class NeumorphicTextEdit(QTextEdit):
             QTextEdit {
                 background-color: #1E1F2B;
                 border: none;
-                
                 padding: 10px;
                 color: #E0E0E0;
             }
         """)
-
-
