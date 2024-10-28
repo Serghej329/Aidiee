@@ -82,6 +82,7 @@ class TitleBar(QWidget):
         self.setStyleSheet("""
             background-color: #2C2D3A;
             color: #E0E0E0;
+            padding: 5px;
         """)
 
         layout = QHBoxLayout(self)
@@ -100,6 +101,7 @@ class TitleBar(QWidget):
             QMenuBar {
                 background-color: transparent;
                 color: #E0E0E0;
+                padding: 10px;
             }
             QMenuBar::item {
                 padding: 5px 10px;
@@ -172,13 +174,22 @@ class TitleBar(QWidget):
         self.close_button.setStyleSheet(button_style)
         layout.addWidget(self.close_button)
 
+        # Initialize the maximize button state
+        self.update_maximize_button_state()
+
     def toggle_maximize_restore(self):
         if self.parent().isMaximized():
             self.parent().showNormal()
-            self.maximize_button.setText("□")
         else:
             self.parent().showMaximized()
+        self.update_maximize_button_state()
+
+    def update_maximize_button_state(self):
+        if self.parent().isMaximized():
             self.maximize_button.setText("❐")
+        else:
+            self.maximize_button.setText("□")
+
 
     def create_menus(self):
         file_menu = self.menu_bar.addMenu("File")
@@ -299,7 +310,11 @@ class SimpleIDE(QMainWindow):
 
         self.title_bar = TitleBar(self, ide_instance=self)
         main_layout.addWidget(self.title_bar)
+
+        # Crea un QSplitter per dividere lo spazio tra il QDockWidget e l'altro widget
         self.splitter = QSplitter(Qt.Horizontal)
+        main_layout.addWidget(self.splitter)
+
         self.file_explorer = FileExplorerWidget(self)
         self.folder_dialog = QFileDialog
         self.splitter.addWidget(self.file_explorer)
@@ -337,7 +352,6 @@ class SimpleIDE(QMainWindow):
         """)
         self.splitter.addWidget(self.tab_widget)
         self.splitter.setSizes([250, self.width() - 250])
-        main_layout.addWidget(self.splitter)
 
         self.button_container = QWidget()
         self.button_container.setMinimumHeight(50)
@@ -404,7 +418,6 @@ class SimpleIDE(QMainWindow):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         
-
         # Calculate dynamic height for the button container
         frame_height = self.height() * 0.08
         self.button_container.setFixedHeight(int(frame_height))
@@ -436,13 +449,18 @@ class SimpleIDE(QMainWindow):
     def create_dock_widget(self):
         self.dock_widget = QDockWidget("Voice Assistant", self)
         self.dock_widget.setAllowedAreas(Qt.AllDockWidgetAreas)
-        self.dock_widget.setFeatures(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetClosable)
+        self.dock_widget.setFeatures(
+            QDockWidget.DockWidgetMovable | 
+            QDockWidget.DockWidgetFloatable | 
+            QDockWidget.DockWidgetClosable
+        )
         
         self.dock_widget.setStyleSheet("""
             QDockWidget {
                 background-color: #2C2D3A;
                 color: #E0E0E0;
-                border: 1px solid;
+                border: none;
+                padding: 10px;
             }
             QDockWidget::title {
                 background-color: #2C2D3A;
@@ -453,6 +471,11 @@ class SimpleIDE(QMainWindow):
         """)
 
         dock_content = NeumorphicWidget()
+        dock_content.setStyleSheet("""
+            QWidget {
+                padding: 10px;  /* Aggiungi padding di 10 pixel */
+            }
+        """)
         dock_layout = QVBoxLayout(dock_content)
         dock_layout.setContentsMargins(5, 5, 5, 5)
         dock_layout.setSpacing(5)
@@ -551,75 +574,69 @@ class SimpleIDE(QMainWindow):
         self.dock_widget.hide()
 
     def update_dock_widget_style(self, dock_area):
+        # Impostiamo solo dimensioni iniziali suggerite senza bloccare il ridimensionamento
         screen_size = QApplication.desktop().screenGeometry()
         if self.dock_widget.isFloating():
-            # Dimensioni quadrate prestabilite per la modalità floating
-            square_size = 300  # Puoi cambiare questo valore a seconda delle tue esigenze
-            self.dock_widget.setFixedSize(square_size, square_size)
+            self.dock_widget.resize(300, 300)
         else:
-            if dock_area == Qt.TopDockWidgetArea:
-                self.dock_widget.setFixedHeight(screen_size.height() // 4)
-                self.dock_widget.setFixedWidth(screen_size.width())
-            elif dock_area == Qt.BottomDockWidgetArea:
-                self.dock_widget.setFixedHeight(screen_size.height() // 4)
-                self.dock_widget.setFixedWidth(screen_size.width())
-            elif dock_area == Qt.LeftDockWidgetArea or dock_area == Qt.RightDockWidgetArea:
-                self.dock_widget.setFixedHeight(screen_size.height())
-                self.dock_widget.setFixedWidth(screen_size.width() // 4)
-                
+            if dock_area in [Qt.TopDockWidgetArea, Qt.BottomDockWidgetArea]:
+                self.dock_widget.resize(screen_size.width() // 2, screen_size.height() // 4)
+            elif dock_area in [Qt.LeftDockWidgetArea, Qt.RightDockWidgetArea]:
+                self.dock_widget.resize(screen_size.width() // 4, screen_size.height() // 2)
+                    
     def start_detector(self):
-        self.detector_thread = DetectorThread(self.detector)
-        self.detector_thread.keyword_detected.connect(self.on_keyword_detected)
-        self.detector_thread.silence_detected.connect(self.on_silence_detected)
-        self.detector_thread.transcription_ready.connect(self.on_transcription_ready)
-        self.detector_thread.start()
-        self.stopped = False
-        self.start_button.setEnabled(False)
-        self.stop_button.setEnabled(True)
-        self.status_label.setText("Assistant active - Waiting for 'Alexa'...")
-        #self.ai_button.start_animation()
+            self.detector_thread = DetectorThread(self.detector)
+            self.detector_thread.keyword_detected.connect(self.on_keyword_detected)
+            self.detector_thread.silence_detected.connect(self.on_silence_detected)
+            self.detector_thread.transcription_ready.connect(self.on_transcription_ready)
+            self.detector_thread.start()
+            self.stopped = False
+            self.start_button.setEnabled(False)
+            self.stop_button.setEnabled(True)
+            self.status_label.setText("Assistant active - Waiting for 'Alexa'...")
+            #self.ai_button.start_animation()
 
     def stop_detector(self):
-        if self.detector_thread:
-            self.detector_thread.stopped = True
-            self.detector.running = False
-            self.detector.keyword_detected.set()
-            self.detector.silence_detected.set()
-            self.detector_thread.wait()
+            if self.detector_thread:
+                self.detector_thread.stopped = True
+                self.detector.running = False
+                self.detector.keyword_detected.set()
+                self.detector.silence_detected.set()
+                self.detector_thread.wait()
+                
+                if self.detector_thread.isRunning():
+                    print("Warning: Detector thread did not stop cleanly.")
+                
+                self.detector.stop()
+                self.detector_thread = None
             
-            if self.detector_thread.isRunning():
-                print("Warning: Detector thread did not stop cleanly.")
-            
-            self.detector.stop()
-            self.detector_thread = None
-        
-        self.start_button.setEnabled(True)
-        self.stop_button.setEnabled(False)
-        self.status_label.setText("Assistant stopped")
-        #self.ai_button.stop_animation()
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            self.status_label.setText("Assistant stopped")
+            #self.ai_button.stop_animation()
 
     def on_keyword_detected(self):
-        self.status_label.setText("Alexa detected! Listening...")
-        #self.ai_button.set_active_state(True)
+            self.status_label.setText("Alexa detected! Listening...")
+            #self.ai_button.set_active_state(True)
 
     def on_silence_detected(self):
-        self.status_label.setText("Processing audio...")
-        #self.ai_button.set_processing_state(True)
+            self.status_label.setText("Processing audio...")
+            #self.ai_button.set_processing_state(True)
 
     def on_transcription_ready(self, transcription):
-        current_text = self.transcription_text.toPlainText()
-        if current_text:
-            new_text = f"{current_text}\n{transcription}"
-        else:
-            new_text = transcription
-        self.transcription_text.setPlainText(new_text)
-        self.status_label.setText("Assistant active - Waiting for 'Alexa'...")
-       # self.ai_button.set_active_state(False)
-       # self.ai_button.set_processing_state(False)
+            current_text = self.transcription_text.toPlainText()
+            if current_text:
+                new_text = f"{current_text}\n{transcription}"
+            else:
+                new_text = transcription
+            self.transcription_text.setPlainText(new_text)
+            self.status_label.setText("Assistant active - Waiting for 'Alexa'...")
+            #self.ai_button.set_active_state(False)
+            #self.ai_button.set_processing_state(False)
 
     def closeEvent(self, event):
-        self.stop_detector()
-        event.accept()
+            self.stop_detector()
+            event.accept()
 
     def toggle_dock_widget(self):
         
