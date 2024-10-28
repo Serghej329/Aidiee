@@ -12,11 +12,11 @@ from PyQt5.QtGui import QIcon
 #TODO La cartella selezionata nel file explorer dovrebbe cambiare se si cambiano le tab (necessarie modifiche anche al file "tab_dictionary.py")
 
 class FileExplorerWidget(QWidget):
-    def __init__(self, simple_ide):
+    def __init__(self, simple_ide,default_path):
         super().__init__()
         self.simple_ide = simple_ide
         self.setMinimumWidth(250)
-        self.setup_ui("")
+        self.setup_ui(default_path)
 
     def update_ui(self,updated_path):
         self.model.setRootPath(updated_path)

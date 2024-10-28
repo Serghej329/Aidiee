@@ -19,8 +19,8 @@ from voice_detection_module import CombinedDetector
 from animated_circle_button import AnimatedCircleButton  # Salva il codice dell'artifact in questo file
 from file_explorer_widget import FileExplorerWidget
 from tabs_dictionary import tabs_dictionary
-
-
+#from datetime import datetime
+from projects import ProjectManager
 # Ottieni il percorso relativo della cartella img
 current_dir = os.path.dirname(os.path.abspath(__file__))
 img_dir = os.path.join(current_dir, 'img')
@@ -185,7 +185,7 @@ class TitleBar(QWidget):
         new_file_action = file_menu.addAction("New File")
         new_file_action.triggered.connect(self.ide_instance.create_new_file)
         open_project = file_menu.addAction("Open Project")
-        open_project.triggered.connect(self.ide_instance.open_project)
+        open_project.triggered.connect(lambda: self.ide_instance.project_manager.open_project(self))
         
         file_menu.addAction("Save")
         file_menu.addSeparator()
@@ -296,12 +296,15 @@ class SimpleIDE(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
-
+        
+        self.file_explorer = FileExplorerWidget(self,project_path)
+        self.folder_dialog = QFileDialog
+        self.project_manager = ProjectManager(self.folder_dialog, self.file_explorer)
         self.title_bar = TitleBar(self, ide_instance=self)
         main_layout.addWidget(self.title_bar)
         self.splitter = QSplitter(Qt.Horizontal)
-        self.file_explorer = FileExplorerWidget(self)
-        self.folder_dialog = QFileDialog
+        
+        
         self.splitter.addWidget(self.file_explorer)
 
         self.tab_widget = QTabWidget()
@@ -638,24 +641,50 @@ class SimpleIDE(QMainWindow):
                 self.dock_widget.setFixedHeight(screen_size.height())
                 self.dock_widget.setFixedWidth(screen_size.width() // 4)
 
-    def open_project(self,):
-        project_folder = None
-        project_folder = self.folder_dialog.getExistingDirectory(self,"Open Project", "/")
-        self.file_explorer.update_ui(project_folder)
-        json_data =  '{"project_name":"Project-1"}'
-        self.update_project_json(project_folder, json_data)
+#     def open_project(self):
+#         project_folder = None
+#         project_folder = self.folder_dialog.getExistingDirectory(self,"Open Project", "/")
+#         project_name = os.path.basename(project_folder)
+#         now = datetime.now()
+#         print(now.timestamp())
+#         timestamp = now.timestamp()
+#         #root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+#         #with open(os.path.join(root_path,"/my-projects.aide.json", 'rw')) as file:
+#         all_projects = {"projects": []}
+#         my_projects_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),  "my-projects.aide.json")
+#         if os.path.isfile(my_projects_path) is False:
+#              all_projects = list(all_projects["projects"])
 
-    def update_project_json(self,path, data): #IF DONT EXIST CREATE IT
-        # Create the full file path with a dot prefix
-        filename = "aide.proj.json"  # Change this to your desired filename
-        full_path = os.path.join(path, filename)
-        if sys.platform == "win32" and os.path.exists(full_path):
-                FILE_ATTRIBUTE_NORMAL = 0x80
-                ctypes.windll.kernel32.SetFileAttributesW(full_path, FILE_ATTRIBUTE_NORMAL)
-        # Write the JSON file
-        with open(full_path, 'w') as f:
-                json.dump(data, f, indent=4)
-        # Make file hidden on Windows
-        if sys.platform == "win32":
-                FILE_ATTRIBUTE_HIDDEN = 0x02
-                ctypes.windll.kernel32.SetFileAttributesW(full_path, FILE_ATTRIBUTE_HIDDEN)
+#              all_projects.append({
+#                 "name": os.path.basename(project_folder),
+#                 "path": project_folder,
+#                 "timestamp": timestamp,
+#              })
+#         else:
+#                 with open(my_projects_path) as file:
+#                         all_projects = json.load(file)
+#                         all_projects.append({
+#                                 "name": project_name,
+#                                 "path": project_folder,
+#                                 "timestamp": timestamp,
+#                         })
+#         with open(my_projects_path, 'w') as file:
+#                 json.dump(all_projects, file, indent=4,  separators=(',',': '))
+#         self.file_explorer.update_ui(project_folder)
+#         json_data =  '{"project_name":"'+project_name+'"}'
+#         self.update_project_json(project_folder, json_data)
+
+#     def update_project_json(self,path, data): #IF DONT EXIST CREATE IT
+#         # Create the full file path with a dot prefix
+#         filename = "project.aide.json"  # Change this to your desired filename
+#         full_path = os.path.join(path, filename)
+#         if sys.platform == "win32" and os.path.exists(full_path):
+#                 FILE_ATTRIBUTE_NORMAL = 0x80
+#                 ctypes.windll.kernel32.SetFileAttributesW(full_path, FILE_ATTRIBUTE_NORMAL)
+#         # Write the JSON file
+#         with open(full_path, 'w') as f:
+#                 json.dump(data, f, indent=4)
+#         # Make file hidden on Windows
+#         if sys.platform == "win32":
+#                 FILE_ATTRIBUTE_HIDDEN = 0x02
+#                 ctypes.windll.kernel32.SetFileAttributesW(full_path, FILE_ATTRIBUTE_HIDDEN)
