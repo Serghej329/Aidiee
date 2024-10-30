@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QComboBox, QTextEdit
+from PyQt5.QtWidgets import QWidget, QComboBox, QTextEdit, QPushButton
 from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QPainter, QPen, QColor, QLinearGradient
+from PyQt5.QtGui import QPainter, QPen, QColor, QLinearGradient, QIcon
 
 class NeumorphicWidget(QWidget):
     def __init__(self, parent=None):
@@ -21,7 +21,7 @@ class NeumorphicWidget(QWidget):
 
         painter.setBrush(gradient)
         painter.setPen(Qt.NoPen)
-        painter.drawRoundedRect(self.rect(), 10, 10)
+        painter.drawRect(self.rect())
 
         painter.setPen(QPen(dark_shadow, 2))
         painter.drawLine(self.rect().topLeft() + QPoint(5, 5), 
@@ -44,7 +44,6 @@ class NeumorphicComboBox(QComboBox):
             QComboBox {
                 background-color: #2C2D3A;
                 border: none;
-                border-radius: 10px;
                 padding: 5px;
                 color: #E0E0E0;
             }
@@ -52,8 +51,6 @@ class NeumorphicComboBox(QComboBox):
                 width: 30px;
                 border: none;
                 background: #3D3E4D;
-                border-top-right-radius: 10px;
-                border-bottom-right-radius: 10px;
             }
         """)
 
@@ -64,10 +61,25 @@ class NeumorphicTextEdit(QTextEdit):
             QTextEdit {
                 background-color: #1E1F2B;
                 border: none;
-                
                 padding: 10px;
                 color: #E0E0E0;
             }
         """)
-
-
+        
+        
+        
+class NeumorphicButton(QPushButton):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: #2C2D3A;
+                color: #E0E0E0;
+                border: none;
+                padding: 10px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #3D3E4D;
+            }
+        """)

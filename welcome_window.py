@@ -1,62 +1,16 @@
+import json
+import sys
+import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QLabel, QLineEdit, QPushButton, 
-                           QTreeWidget, QTreeWidgetItem,QFileDialog)
-from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QIcon, QFont, QPainter, QPen, QColor, QLinearGradient
-import sys
-import json
-import os
-from projects import ProjectManager
+                           QTreeWidget, QTreeWidgetItem, QFileDialog, QStyleOption, QStyle)
+from PyQt5.QtCore import Qt, QPoint, QPointF, pyqtSignal
+from PyQt5.QtGui import QIcon, QFont, QPainter, QPen, QColor, QLinearGradient, QPolygonF
 from file_explorer_widget import FileExplorerWidget
+from projects import ProjectManager
+from simple_ide import SimpleIDE
+from neumorphic_widgets import NeumorphicButton
 
-class NeumorphicWidget(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setAutoFillBackground(True)
-        
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        bg_color = QColor("#2C2D3A")
-        dark_shadow = bg_color.darker(130)
-        light_shadow = bg_color.lighter(110)
-        
-        gradient = QLinearGradient(0, 0, self.width(), self.height())
-        gradient.setColorAt(0, bg_color.lighter(105))
-        gradient.setColorAt(1, bg_color)
-        
-        painter.setBrush(gradient)
-        painter.setPen(Qt.NoPen)
-        painter.drawRoundedRect(self.rect(), 10, 10)
-        
-        painter.setPen(QPen(dark_shadow, 2))
-        painter.drawLine(self.rect().topLeft() + QPoint(5, 5),
-                        self.rect().bottomLeft() + QPoint(5, -5))
-        painter.drawLine(self.rect().topLeft() + QPoint(5, 5),
-                        self.rect().topRight() + QPoint(-5, 5))
-        
-        painter.setPen(QPen(light_shadow, 2))
-        painter.drawLine(self.rect().bottomLeft() + QPoint(5, -5),
-                        self.rect().bottomRight() + QPoint(-5, -5))
-        painter.drawLine(self.rect().topRight() + QPoint(-5, 5),
-                        self.rect().bottomRight() + QPoint(-5, -5))
-
-class NeumorphicButton(QPushButton):
-    def __init__(self, text, parent=None):
-        super().__init__(text, parent)
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: #2C2D3A;
-                color: #E0E0E0;
-                border: none;
-                border-radius: 10px;
-                padding: 10px;
-                text-align: left;
-            }
-            QPushButton:hover {
-                background-color: #3D3E4D;
-            }
-        """)
 
 class WelcomeWindow(QMainWindow):
     def __init__(self):
@@ -65,65 +19,86 @@ class WelcomeWindow(QMainWindow):
         self.file_explorer = FileExplorerWidget
         self.project_manager = ProjectManager(self.folder_dialog,self.file_explorer)
         self.setWindowTitle("Visual Studio 2022")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1200, 700)  # Dimensioni aumentate per migliore leggibilità
+        
+        # Stile principale migliorato
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #1E1F2B;
             }
             QLabel {
                 color: #E0E0E0;
+                font-family: 'Segoe UI';
+            }
+            QLabel#headerLabel {
+                font-size: 24px;
+                font-weight: bold;
+                padding: 10px 0;
             }
             QLineEdit {
                 background-color: #2C2D3A;
                 color: #E0E0E0;
-                border: none;
-                border-radius: 10px;
-                padding: 8px;
+                border: 1px solid #3D3E4D;
+                border-radius: 4px;
+                padding: 8px 12px;
+                font-family: 'Segoe UI';
+                font-size: 13px;
+                margin: 5px 0;
+            }
+            QLineEdit:focus {
+                border: 1px solid #0078D4;
+                background-color: #252632;
             }
             QTreeWidget {
-                background-color: #2C2D3A;
+                background-color: transparent;
                 color: #E0E0E0;
                 border: none;
-                border-radius: 10px;
+                font-family: 'Segoe UI';
+                font-size: 13px;
+                padding: 5px;
             }
             QTreeWidget::item {
-                padding: 5px;
+                padding: 8px 4px;
+                border-radius: 4px;
             }
             QTreeWidget::item:selected {
                 background-color: #3D3E4D;
             }
+            QTreeWidget::branch {
+                background: transparent;
+                border: none;
+            }
+            QTreeWidget::branch:has-children:!has-siblings,
+            QTreeWidget::branch:has-children:has-siblings {
+                border: none;
+            }
         """)
         
-        # Central widget with neumorphic style
-        central_widget = NeumorphicWidget()
+        # Central widget
+        central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(30, 30, 30, 30)  # Margini esterni aumentati
+        main_layout.setSpacing(40)  # Spazio tra i pannelli
         
         # Left panel
-        left_panel = NeumorphicWidget()
+        left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(15)  # Spazio tra elementi
         
         # Recent section
         recent_label = QLabel("Apri recenti")
-        recent_label.setFont(QFont("Segoe UI", 14))
+        recent_label.setObjectName("headerLabel")
+        
         search_box = QLineEdit()
         search_box.setPlaceholderText("Cerca in recenti (ALT+S)")
+        search_box.setMinimumHeight(32)
         
-        # Tree widget for recent files
-        tree = QTreeWidget()
-        tree.setHeaderHidden(True)
-
-
-        # Adding recent items
-        # oggi = QTreeWidgetItem(tree, ["Oggi"])
-        # prova1 = QTreeWidgetItem(oggi, ["prova1"])
-        # prova1.addChild(QTreeWidgetItem(["C:\\Users\\user\\Desktop\\Informatica"]))
-        
-        # In WelcomeWindow.__init__, replace the existing tree widget creation with:
+        # Tree widget
         self.tree = ButtonTreeWidget()
-        left_layout.addWidget(self.tree)
-
-        # Example of how to populate the tree with different project categories:
+        
+        # Popolamento tree
         today_projects = self.project_manager.getTodayProjects()
         month_projects = self.project_manager.getMonthProjects()
         all_projects = self.project_manager.getAllProjects()
@@ -132,23 +107,24 @@ class WelcomeWindow(QMainWindow):
         make_tree(self.tree, "This Month", month_projects)
         make_tree(self.tree, "All", all_projects)
 
-        # Connect the tree's itemClicked signal to handle project opening
         self.tree.projectClicked.connect(lambda path: self.open_main_window(path))
 
         left_layout.addWidget(recent_label)
         left_layout.addWidget(search_box)
-        left_layout.addWidget(tree)
-        left_layout.addStretch()
+        left_layout.addWidget(self.tree, 1)
         
         # Right panel
-        right_panel = NeumorphicWidget()
+        right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(15)
         
         # Start section
         start_label = QLabel("Inizia subito")
-        start_label.setFont(QFont("Segoe UI", 14))
+        start_label.setObjectName("headerLabel")
+        right_layout.addWidget(start_label)
         
-        # Action buttons
+        # Action buttons con stile migliorato
         actions = [
             ("Clona un repository", "Consente di ottenere il codice da un repository\nonline, come GitHub o Azure DevOps"),
             ("Apri un progetto o una soluzione", "Consente di aprire un progetto locale o un file\ncon estensione sln di Visual Studio"),
@@ -156,73 +132,122 @@ class WelcomeWindow(QMainWindow):
             ("Crea un nuovo progetto", "Consente di scegliere un progetto modello con\nscaffolding del codice per iniziare")
         ]
         
-        right_layout.addWidget(start_label)
-        
         for action, description in actions:
-            action_button = NeumorphicButton(f"{action}\n{description}")
+            action_button = QPushButton()
+            action_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #2C2D3A;
+                    color: #E0E0E0;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 15px;
+                    text-align: left;
+                    font-family: 'Segoe UI';
+                }
+                QPushButton:hover {
+                    background-color: #3D3E4D;
+                }
+                QPushButton:pressed {
+                    background-color: #252632;
+                }
+            """)
+            
+            # Layout del bottone
+            button_layout = QVBoxLayout()
+            button_layout.setSpacing(5)
+            
+            title = QLabel(action)
+            title.setStyleSheet("font-size: 14px; font-weight: bold; color: #E0E0E0;")
+            desc = QLabel(description)
+            desc.setStyleSheet("font-size: 12px; color: #A0A0A0;")
+            
+            button_layout.addWidget(title)
+            button_layout.addWidget(desc)
+            action_button.setLayout(button_layout)
             action_button.setMinimumHeight(80)
+            
             right_layout.addWidget(action_button)
         
         right_layout.addStretch()
         
-        # Continue without code button
-        continue_button = NeumorphicButton("Continua senza codice →")
+        # Continue button
+        continue_button = QPushButton("Continua senza codice →")
         continue_button.clicked.connect(self.open_main_window)
-        continue_button.setStyleSheet(continue_button.styleSheet() + "text-align: right;")
+        continue_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #0078D4;
+                border: none;
+                padding: 10px;
+                text-align: right;
+                font-family: 'Segoe UI';
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                color: #2297E9;
+                text-decoration: underline;
+            }
+        """)
         right_layout.addWidget(continue_button)
         
-        # Add panels to main layout with spacing
+        # Add panels to main layout
         main_layout.addWidget(left_panel, 1)
-        main_layout.addSpacing(20)
         main_layout.addWidget(right_panel, 2)
         
-    def open_main_window(self, project_path):
-        """Open the main IDE window with the selected project"""
-        from simple_ide import SimpleIDE
-        # Now project_path will contain the actual path from the clicked project
-        self.main_window = SimpleIDE(project_path)  
+    def open_main_window(self, project_path=None):
+        self.main_window = SimpleIDE(project_path)
         self.main_window.showMaximized()
         self.close()
     
-    def  loadProjects(self):
+    def loadProjects(self):
         root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
         with open(os.path.join(root_path,"/my-projects.aide.json", 'r')) as file:
                 data = json.load(file)
-        
-from PyQt5.QtWidgets import (QTreeWidgetItem, QTreeWidget, QPushButton, 
-                           QWidget, QHBoxLayout)
-from PyQt5.QtCore import Qt, pyqtSignal
+
 
 class ButtonTreeWidget(QTreeWidget):
-    """Custom Tree Widget that supports button items"""
-    projectClicked = pyqtSignal(str)  # Signal to emit the project path when clicked
+    projectClicked = pyqtSignal(str)
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setHeaderHidden(True)
         self.setStyleSheet("""
             QTreeWidget {
-                background-color: #2C2D3A;
+                background-color: transparent;
                 color: #E0E0E0;
                 border: none;
-                border-radius: 10px;
+                font-family: 'Segoe UI';
+                padding: 5px;
             }
             QTreeWidget::item {
-                padding: 5px;
+                padding: 8px;
+                border-radius: 4px;
             }
             QTreeWidget::item:selected {
                 background-color: #3D3E4D;
             }
+            QTreeWidget::branch {
+                background: transparent;
+            }
+            QTreeWidget::branch:has-children {
+                border-image: none;
+                image: none;
+            }
+            QTreeWidget::branch:has-children:open {
+                border-image: none;
+                image: none;
+            }
         """)
 
+
 class TreeButtonWidget(QWidget):
-    """Custom widget that contains a button for tree items"""
-    clicked = pyqtSignal(str)  # Signal to emit the project path when clicked
+    clicked = pyqtSignal(str)
     
     def __init__(self, text, project_path, parent=None):
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         
         self.button = QPushButton(text)
         self.button.setStyleSheet("""
@@ -230,13 +255,17 @@ class TreeButtonWidget(QWidget):
                 background-color: transparent;
                 color: #E0E0E0;
                 border: none;
+                padding: 8px;
                 text-align: left;
-                padding: 5px;
-                width: 100%;
+                font-family: 'Segoe UI';
+                font-size: 13px;
+                border-radius: 4px;
             }
             QPushButton:hover {
                 background-color: #3D3E4D;
-                border-radius: 5px;
+            }
+            QPushButton:pressed {
+                background-color: #252632;
             }
         """)
         self.project_path = project_path
@@ -251,30 +280,16 @@ class TreeButtonWidget(QWidget):
         project_manager.updateTimestamp(self.project_path)
         self.clicked.emit(self.project_path)
 
+
 def make_tree(tree_widget, label, projects):
-    """
-    Create a tree with buttons from a list of projects.
-    
-    Args:
-        tree_widget (ButtonTreeWidget): The tree widget to populate
-        label (str): Label for the root item (e.g., "Today", "This Month")
-        projects (list): List of project dictionaries from ProjectManager
-    """
-    # Create root item
     root_item = QTreeWidgetItem(tree_widget)
     root_item.setText(0, label)
     root_item.setExpanded(True)
     
-    # Add project items
     for project in projects:
-        # Create item to hold the button widget
         item = QTreeWidgetItem(root_item)
-        
-        # Create button widget with project name and hidden path
         button_widget = TreeButtonWidget(project["name"], project["path"])
         button_widget.clicked.connect(tree_widget.projectClicked.emit)
-        
-        # Set the button widget for the item
         tree_widget.setItemWidget(item, 0, button_widget)
         
     return root_item
