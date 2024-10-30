@@ -11,14 +11,14 @@ Thumbs.db
 *.tmp
 *.bak
 *.old
-
+*.json
 # Ignora file di configurazione specifici per l'editor
 # Aggiungi qui gli altri editor che utilizzi (es: Sublime Text, VS Code)
 .idea/
 .vscode/
 
 # Ignora la cartella del modello e tutto ciò che inizia con "models"
-models
+models/*.pt
 
 # Ignora file di output specifici
 # (Aggiungi qui altri file di output che il tuo progetto genera)
