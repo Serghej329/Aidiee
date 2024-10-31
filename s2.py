@@ -292,13 +292,14 @@ class SimpleIDE(QMainWindow):
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
         
-        self.file_explorer = FileExplorerWidget(self, project_path)
+        self.file_explorer = FileExplorerWidget(self,project_path)
         self.folder_dialog = QFileDialog
         self.project_manager = ProjectManager(self.folder_dialog, self.file_explorer)
         self.title_bar = TitleBar(self, ide_instance=self)
         main_layout.addWidget(self.title_bar)
-        
         self.splitter = QSplitter(Qt.Horizontal)
+        
+        
         self.splitter.addWidget(self.file_explorer)
 
         self.tab_widget = QTabWidget()
@@ -345,6 +346,28 @@ class SimpleIDE(QMainWindow):
         button_container_layout.setContentsMargins(0, 0, 0, 0)
         button_container_layout.setSpacing(0)
 
+        self.button_frame = NeumorphicWidget()
+        self.button_frame.setMinimumHeight(50)
+        self.button_frame.setStyleSheet("""
+            background-color: #2C2D3A;
+        """)
+        button_container_layout.addWidget(self.button_frame)
+
+        button_layout = QHBoxLayout(self.button_frame)
+        button_layout.setContentsMargins(10, 10, 10, 10)
+
+        self.wave_background = AnimatedWaveBackground(self.button_frame)
+        self.wave_background.setFixedHeight(40)
+        self.wave_background.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.wave_background.raise_()  # Ensure the wave background is above other widgets
+
+        self.ai_button = AnimatedCircleButton()
+        self.ai_button.setMinimumSize(64, 64)
+        self.ai_button.setMaximumSize(120, 120)
+        button_layout.addWidget(self.ai_button, 0, Qt.AlignCenter)
+
+        main_layout.addWidget(self.button_container)
+
         self.change_style("monokai")
         self.create_dock_widget()
 
@@ -354,9 +377,61 @@ class SimpleIDE(QMainWindow):
         
         self.tabs = tabs_dictionary()
 
-        # Connetti i pulsanti nel dock widget
-        self.start_button.clicked.connect(self.start_detector)
-        self.stop_button.clicked.connect(self.stop_detector)
+    def create_new_file(self):
+        self.file_explorer.create_new_file()
+
+    def add_file_to_tabs(self, file_path):  # CHECKS IF A FILE IS IN THE TAB LIST IF NOT IT CREATES A NEW TAB FOR THE FILE
+        if os.path.splitext(file_path)[1] == ".py":
+            editor_widget = CodeEditorWidget()
+            with open(file_path, "r", encoding="utf8") as f:
+                file_content = f.read()
+            editor_widget.code_editor.setText(file_content)
+            file_name = os.path.basename(file_path)
+            if not self.tabs.tab_exists(file_name):
+                self.tab_widget.addTab(editor_widget, file_name)
+                self.tabs.add_tab(file_name, path=file_path, index=self.tab_widget.count())
+                self.tab_widget.setCurrentWidget(editor_widget)
+            else:
+                data = self.tabs.get_tab(file_name)
+                self.tab_widget.setCurrentIndex(data["index"] - 1)
+
+            # Apply the current style to all existing tabs
+            self.change_style(self.current_style)
+
+    def close_tab(self, index):
+        self.tab_widget.removeTab(index)
+        self.tabs.remove_tab(self.tabs.get_tab_by_index(index + 1))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        # Calculate dynamic height for the button container
+        frame_height = self.height() * 0.08
+        self.button_container.setFixedHeight(int(frame_height))
+
+        # Calculate dynamically the height of the wave as a proportion of the button_frame
+        if hasattr(self, 'wave_background'):
+            wave_height = int(self.button_frame.height() * 1.2)  # Modify the proportion to increase the wave height
+            self.wave_background.setFixedHeight(wave_height)
+
+            # Ensure the wave does not get clipped
+            self.button_frame.setStyleSheet("""
+                background-color: #2C2D3A;
+                overflow: visible;
+            """)
+
+            # Position the wave so it overflows downwards
+            self.wave_background.resize(self.button_frame.width(), wave_height)
+            self.wave_background.move(0, self.button_frame.height() - wave_height)
+
+        if hasattr(self, 'ai_button'):
+            self.ai_button.raise_()
+            button_frame_height = self.button_frame.height()
+            ai_button_size = self.ai_button.height()
+
+            # Position the center of the button at the middle of the top section of the button_frame
+            top_section_mid = button_frame_height * 0.25 - ai_button_size / 2
+            self.ai_button.move(self.button_frame.width() // 2 - self.ai_button.width() // 2, int(top_section_mid))
 
     def create_dock_widget(self):
         self.dock_widget = QDockWidget("Voice Assistant", self)
@@ -440,15 +515,18 @@ class SimpleIDE(QMainWindow):
             
         dock_layout.addLayout(control_layout)
 
-        # Add spacer to push wave background to the bottom
-        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        dock_layout.addItem(spacer)
-
-        # Add AI button and wave background container
+        # Add wave background and AI button container
         wave_container = QWidget()
+        wave_container.setMinimumHeight(120)  # Adjust height as needed
         wave_container_layout = QVBoxLayout(wave_container)
         wave_container_layout.setContentsMargins(0, 0, 0, 0)
         wave_container_layout.setSpacing(0)
+
+        # Add wave background
+        self.wave_background = AnimatedWaveBackground(wave_container)
+        self.wave_background.setFixedHeight(80)  # Adjust height as needed
+        self.wave_background.setAttribute(Qt.WA_TransparentForMouseEvents)
+        wave_container_layout.addWidget(self.wave_background)
 
         # Add AI button
         self.ai_button = AnimatedCircleButton()
@@ -458,12 +536,6 @@ class SimpleIDE(QMainWindow):
         button_container = QHBoxLayout()
         button_container.addWidget(self.ai_button, 0, Qt.AlignCenter)
         wave_container_layout.addLayout(button_container)
-
-        # Add wave background
-        self.wave_background = AnimatedWaveBackground(wave_container)
-        self.wave_background.setFixedHeight(80)
-        self.wave_background.setAttribute(Qt.WA_TransparentForMouseEvents)
-        wave_container_layout.addWidget(self.wave_background)
 
         dock_layout.addWidget(wave_container)
 
@@ -499,31 +571,6 @@ class SimpleIDE(QMainWindow):
         self.dock_widget.setWidget(scroll_area)
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock_widget)
         self.dock_widget.hide()
-
-
-    def create_new_file(self):
-        self.file_explorer.create_new_file()
-
-    def add_file_to_tabs(self, file_path):
-        if os.path.splitext(file_path)[1] == ".py":
-            editor_widget = CodeEditorWidget()
-            with open(file_path, "r", encoding="utf8") as f:
-                file_content = f.read()
-            editor_widget.code_editor.setText(file_content)
-            file_name = os.path.basename(file_path)
-            if not self.tabs.tab_exists(file_name):
-                self.tab_widget.addTab(editor_widget, file_name)
-                self.tabs.add_tab(file_name, path=file_path, index=self.tab_widget.count())
-                self.tab_widget.setCurrentWidget(editor_widget)
-            else:
-                data = self.tabs.get_tab(file_name)
-                self.tab_widget.setCurrentIndex(data["index"] - 1)
-
-            self.change_style(self.current_style)
-
-    def close_tab(self, index):
-        self.tab_widget.removeTab(index)
-        self.tabs.remove_tab(self.tabs.get_tab_by_index(index + 1))
 
     def start_detector(self):
         self.detector_thread = DetectorThread(self.detector)
@@ -596,7 +643,7 @@ class SimpleIDE(QMainWindow):
         screen_size = QApplication.desktop().screenGeometry()
         if self.dock_widget.isFloating():
             # Dimensioni quadrate prestabilite per la modalità floating
-            square_size = 300  
+            square_size = 300  # Puoi cambiare questo valore a seconda delle tue esigenze
             self.dock_widget.setFixedSize(square_size, square_size)
         else:
             if dock_area == Qt.TopDockWidgetArea:
