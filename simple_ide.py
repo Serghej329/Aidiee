@@ -19,6 +19,9 @@ from voice_detection_module import CombinedDetector
 from animated_circle_button import AnimatedCircleButton  # Salva il codice dell'artifact in questo file
 from file_explorer_widget import FileExplorerWidget
 from tabs_dictionary import tabs_dictionary
+from terminal_module import Terminal
+
+
 #from datetime import datetime
 from projects import ProjectManager
 # Ottieni il percorso relativo della cartella img
@@ -32,6 +35,7 @@ img_dir = os.path.join(current_dir, 'img')
 #FIXME - Aggiustare funzionamento della finestra e dei sui controlli (attualmente minimizza ed espandi non sono funzionanti), anche il drag della finestra non è funzionante
 
 #FIXME - Ri-aggiungere la possibilità di ridimensionare il dock-widget 
+
 
 class DetectorThread(QThread):
     keyword_detected = pyqtSignal()
@@ -347,6 +351,13 @@ class SimpleIDE(QMainWindow):
 
         self.change_style("monokai")
         self.create_dock_widget()
+        
+        self.terminal = Terminal(
+            parent=self,
+            initial_height=400,
+            theme='Monokai'
+        )
+        main_layout.addWidget(self.terminal)
 
         # Initialize detector and thread
         self.detector = CombinedDetector()
