@@ -2,8 +2,8 @@ import json
 import sys
 import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                           QHBoxLayout, QLabel, QLineEdit, QPushButton, 
-                           QTreeWidget, QTreeWidgetItem, QFileDialog, QStyleOption, QStyle)
+                             QHBoxLayout, QLabel, QLineEdit, QPushButton, 
+                             QTreeWidget, QTreeWidgetItem, QFileDialog, QStyleOption, QStyle)
 from PyQt5.QtCore import Qt, QPoint, QPointF, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont, QPainter, QPen, QColor, QLinearGradient, QPolygonF
 from file_explorer_widget import FileExplorerWidget
@@ -17,7 +17,7 @@ class WelcomeWindow(QMainWindow):
         super().__init__()
         self.folder_dialog = QFileDialog
         self.file_explorer = FileExplorerWidget
-        self.project_manager = ProjectManager(self.folder_dialog,self.file_explorer)
+        self.project_manager = ProjectManager(self.folder_dialog, self.file_explorer)
         self.setWindowTitle("Visual Studio 2022")
         self.setGeometry(100, 100, 1200, 700)  # Dimensioni aumentate per migliore leggibilità
         
@@ -249,17 +249,21 @@ class TreeButtonWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         
-        self.button = QPushButton(text)
+        self.button = QPushButton(text)  
         self.button.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
                 color: #E0E0E0;
                 border: none;
-                padding: 8px;
                 text-align: left;
                 font-family: 'Segoe UI';
                 font-size: 13px;
                 border-radius: 4px;
+                padding-left: 8px;
+                padding-right: 8px;
+                margin: 0;
+                height: 50px;
+                line-height: 50px;  
             }
             QPushButton:hover {
                 background-color: #3D3E4D;
@@ -268,6 +272,7 @@ class TreeButtonWidget(QWidget):
                 background-color: #252632;
             }
         """)
+        self.button.setMinimumSize(100, 30)
         self.project_path = project_path
         self.button.clicked.connect(self._on_clicked)
         
@@ -279,8 +284,7 @@ class TreeButtonWidget(QWidget):
         project_manager = ProjectManager(folder_dialog, file_explorer)
         project_manager.updateTimestamp(self.project_path)
         self.clicked.emit(self.project_path)
-
-
+        
 def make_tree(tree_widget, label, projects):
     root_item = QTreeWidgetItem(tree_widget)
     root_item.setText(0, label)
