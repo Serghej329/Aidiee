@@ -2,10 +2,11 @@ import os
 import shutil
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTreeView, QFileSystemModel,
-    QInputDialog, QMessageBox, QMenu
+    QInputDialog, QMessageBox, QMenu, QItemDelegate
 )
 from PyQt5.QtCore import Qt, QDir
-from PyQt5.QtGui import QIcon
+
+from PyQt5.QtGui import QIcon, QCursor
 
 #TODO Implementazione dei progetti con tutti i path dei vari .proj.json files salvati in un projects.json
 
@@ -50,6 +51,9 @@ class FileExplorerWidget(QWidget):
         
         # Tree View
         self.tree_view = QTreeView()
+        # tree_item = QItemDelegate()
+        # self.tree_view.setItemDelegate(tree_item)
+        self.tree_view.setCursor(QCursor(Qt.PointingHandCursor))
         self.tree_view.clicked.connect(self.onExplorerClicked)
         self.tree_view.setStyleSheet("""
             QTreeView {
@@ -59,35 +63,14 @@ class FileExplorerWidget(QWidget):
             }
             QTreeView::item {
                 padding: 5px;
-                border-radius: 3px;
+                
             }
             QTreeView::item:selected {
                 background-color: #3D3E4D;
             }
             QTreeView::item:hover {
                 background-color: #3D3E4D;
-            }
-            QTreeView::branch {
-                background-color: #2C2D3A;
-            }
-            QTreeView::branch:has-siblings:!adjoins-item {
-                border-image: url(img/vline.svg) 0;
-            }
-            QTreeView::branch:has-siblings:adjoins-item {
-                border-image: url(img/branch-more.svg) 0;
-            }
-            QTreeView::branch:!has-children:!has-siblings:adjoins-item {
-                border-image: url(img/branch-end.svg) 0;
-            }
-            QTreeView::branch:has-children:!has-siblings:closed,
-            QTreeView::branch:closed:has-children:has-siblings {
-                border-image: none;
-                image: url(img/branch-closed.svg);
-            }
-            QTreeView::branch:open:has-children:!has-siblings,
-            QTreeView::branch:open:has-children:has-siblings {
-                border-image: none;
-                image: url(img/branch-open.svg);
+                
             }
         """)
         

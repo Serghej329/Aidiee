@@ -20,7 +20,7 @@ from animated_circle_button import AnimatedCircleButton  # Salva il codice dell'
 from file_explorer_widget import FileExplorerWidget
 from tabs_dictionary import tabs_dictionary
 from terminal_module import Terminal
-
+from cosmic_splitter import CosmicSplitter
 
 #from datetime import datetime
 from projects import ProjectManager
@@ -281,7 +281,7 @@ class SimpleIDE(QMainWindow):
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setStyleSheet("QMainWindow::separator{ width: 0px; height: 0px; }")
-        
+       
         central_widget = QWidget()
         central_widget.setObjectName("centralWidget")
         central_widget.setStyleSheet("""
@@ -295,16 +295,23 @@ class SimpleIDE(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        
+       
         self.file_explorer = FileExplorerWidget(self, project_path)
         self.folder_dialog = QFileDialog
         self.project_manager = ProjectManager(self.folder_dialog, self.file_explorer)
         self.title_bar = TitleBar(self, ide_instance=self)
         main_layout.addWidget(self.title_bar)
+       
+        # Splitter orizzontale principale
+        self.h_splitter = CosmicSplitter(Qt.Horizontal)
         
-        self.splitter = QSplitter(Qt.Horizontal)
-        self.splitter.addWidget(self.file_explorer)
-
+        # Aggiungi file explorer
+        self.h_splitter.addWidget(self.file_explorer)
+        
+        # Crea splitter verticale per editor e terminale
+        self.v_splitter = CosmicSplitter(Qt.Vertical)
+        
+        # Configura tab widget
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.tabCloseRequested.connect(lambda index: self.close_tab(index))
@@ -339,32 +346,43 @@ class SimpleIDE(QMainWindow):
                 padding: 1.5px;
             }
         """)
-        self.splitter.addWidget(self.tab_widget)
-        self.splitter.setSizes([250, self.width() - 250])
-        main_layout.addWidget(self.splitter)
-
+        
+        # Aggiungi tab widget al splitter verticale
+        self.v_splitter.addWidget(self.tab_widget)
+        
+        # Crea e aggiungi il terminale al splitter verticale
+        self.terminal = Terminal(
+            parent=self,
+            initial_height=200,
+            theme='Monokai'
+        )
+        self.v_splitter.addWidget(self.terminal)
+        
+        # Imposta le proporzioni del splitter verticale
+        self.v_splitter.setSizes([600, 200])  # Modifica questi valori per cambiare le proporzioni
+        
+        # Aggiungi il splitter verticale al splitter orizzontale
+        self.h_splitter.addWidget(self.v_splitter)
+        
+        # Imposta le dimensioni del splitter orizzontale
+        self.h_splitter.setSizes([250, self.width() - 250])
+        
+        # Aggiungi il splitter orizzontale al layout principale
+        main_layout.addWidget(self.h_splitter)
+        
         self.button_container = QWidget()
         self.button_container.setMinimumHeight(50)
         button_container_layout = QVBoxLayout(self.button_container)
         button_container_layout.setContentsMargins(0, 0, 0, 0)
         button_container_layout.setSpacing(0)
-
         self.change_style("monokai")
         self.create_dock_widget()
         
-        self.terminal = Terminal(
-            parent=self,
-            initial_height=400,
-            theme='Monokai'
-        )
-        main_layout.addWidget(self.terminal)
-
         # Initialize detector and thread
         self.detector = CombinedDetector()
         self.detector_thread = None
-        
+       
         self.tabs = tabs_dictionary()
-
         # Connetti i pulsanti nel dock widget
         self.start_button.clicked.connect(self.start_detector)
         self.stop_button.clicked.connect(self.stop_detector)

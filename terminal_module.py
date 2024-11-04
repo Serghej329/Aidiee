@@ -303,8 +303,8 @@ class Terminal(QWidget):
                 background-color: {self.config['background_color']};
                 padding: 4px 13px 4px 13px;
                 border: 0;
-                word-wrap: break-word;
-                overflow-wrap: break-word;
+                
+                
             }}
         """)
 
@@ -427,12 +427,12 @@ class Terminal(QWidget):
                     # Then display all its outputs
                     for output in entry["outputs"]:
                         if output["type"] == "output":
-                            output_content += f'<div style="margin: 4px 0px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">{output["content"].removeprefix(f"{self.last_cwd}>")}</div><br>'
+                            output_content += f'<div style="margin: 4px 0px; white-space: pre-wrap; ">{output["content"].removeprefix(f"{self.last_cwd}>")}</div><br>'
                         elif output["type"] == "error":
                             output_content += f'<br><span style="color: {self.config["error_color"]}">{output["content"]}</span><br>'
                 
                 elif entry["type"] == "output":
-                    output_content += f'<div style="margin: 4px 0px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">{entry["content"]}</div>'
+                    output_content += f'<div style="margin: 4px 0px; white-space: pre-wrap; ">{entry["content"]}</div>'
                 elif entry["type"] == "error":
                     output_content += f'<br><span style="color: {self.config["error_color"]}">{entry["content"]}</span><br>'
 
