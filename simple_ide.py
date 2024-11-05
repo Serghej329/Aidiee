@@ -3,12 +3,13 @@ import os
 import asyncio
 import json
 import ctypes
+
 from PyQt5.QtWidgets import (
     QWidget, QTextEdit, QVBoxLayout, QComboBox, QHBoxLayout, QSpacerItem,
     QSizePolicy, QPushButton, QApplication, QLabel, QMenuBar, QMenu, QAction,
     QMainWindow, QDockWidget, QLineEdit, QScrollArea, QTabWidget, QSplitter,QFileDialog
 )
-from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot, QTimer, QObject, QUrl
+from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal, pyqtSlot, QTimer, QObject, QUrl, QPoint
 from PyQt5.QtGui import QFont, QIcon, QPalette, QPixmap
 from PyQt5.QtSvg import QSvgWidget
 from neumorphic_widgets import NeumorphicWidget, NeumorphicTextEdit
@@ -56,7 +57,7 @@ class DetectorThread(QThread):
                     break
                 self.keyword_detected.emit()
                 
-                if self.detector.silence_detected.wait():  # Increased timeout
+                if self.detector.silence_detected.wait():  
                     if self.stopped:
                         break
                     audio_data = self.detector.get_audio_data()
@@ -78,6 +79,13 @@ class TitleBar(QWidget):
         super().__init__(parent)
         self.ide_instance = ide_instance
         self.setFixedHeight(40)
+        self.parent_window = parent
+        self.pressing = False
+        self.start = QPoint(0, 0)
+        
+        # Abilita il tracciamento del mouse per il drag
+        self.setMouseTracking(True)
+        
         self.setStyleSheet("""
             background-color: #2C2D3A;
             color: #E0E0E0;
@@ -87,14 +95,27 @@ class TitleBar(QWidget):
         layout.setContentsMargins(10, 0, 10, 0)
         layout.setSpacing(0)
 
-        # Logo - use an SVG icon
+        # Logo
         logo_path = os.path.join(img_dir, 'logo.svg')
-        logo_widget = QSvgWidget(logo_path)  # Adjust the path to your SVG
-        logo_widget.setFixedSize(30, 30)  # Set size according to your logo
+        logo_widget = QSvgWidget(logo_path)
+        logo_widget.setFixedSize(30, 30)
         layout.addWidget(logo_widget)
 
         # Menu Bar
         self.menu_bar = QMenuBar(self)
+        self.setup_menubar_style()
+        layout.addWidget(self.menu_bar)
+
+        # Spacer
+        layout.addSpacerItem(QSpacerItem(60, 30, QSizePolicy.Expanding ))
+
+        # Window Control Buttons
+        self.create_buttons(layout)
+        
+        # Create Menus
+        self.create_menus()
+
+    def setup_menubar_style(self):
         self.menu_bar.setStyleSheet("""
             QMenuBar {
                 background-color: transparent;
@@ -124,21 +145,11 @@ class TitleBar(QWidget):
                 border-radius: 3px;
             }
         """)
-        layout.addWidget(self.menu_bar)
 
-        # Spacer
-        layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-
-        # Buttons
-        self.create_buttons(layout)
-
-        # Create Menus
-        self.create_menus()
-        
     def create_buttons(self, layout):
         button_style = """
             QPushButton {
-                background-color: #2C2D3A;
+                background-color: transparent;
                 border: none;
                 color: #E0E0E0;
                 font-size: 16px;
@@ -153,31 +164,60 @@ class TitleBar(QWidget):
             }
         """
 
+        # Minimize Button
         self.minimize_button = QPushButton("−")
         self.minimize_button.setFixedSize(30, 30)
-        self.minimize_button.clicked.connect(self.parent().showMinimized)
         self.minimize_button.setStyleSheet(button_style)
+        self.minimize_button.clicked.connect(self.minimize_window)
         layout.addWidget(self.minimize_button)
 
+        # Maximize Button
         self.maximize_button = QPushButton("□")
         self.maximize_button.setFixedSize(30, 30)
-        self.maximize_button.clicked.connect(self.toggle_maximize_restore)
         self.maximize_button.setStyleSheet(button_style)
+        self.maximize_button.clicked.connect(self.toggle_maximize_restore)
         layout.addWidget(self.maximize_button)
 
+        # Close Button
         self.close_button = QPushButton("×")
         self.close_button.setFixedSize(30, 30)
-        self.close_button.clicked.connect(self.parent().close)
         self.close_button.setStyleSheet(button_style)
+        self.close_button.clicked.connect(self.close_window)
         layout.addWidget(self.close_button)
 
+    # Eventi del mouse per il drag della finestra
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.pressing = True
+            self.start = event.globalPos()
+            self.window_pos = self.parent_window.pos()
+
+    def mouseMoveEvent(self, event):
+        if self.pressing and not self.parent_window.isMaximized():
+            delta = event.globalPos() - self.start
+            self.parent_window.move(self.window_pos + delta)
+
+    def mouseReleaseEvent(self, event):
+        self.pressing = False
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.toggle_maximize_restore()
+
+    # Funzioni per i controlli della finestra
+    def minimize_window(self):
+        self.parent_window.showMinimized()
+
     def toggle_maximize_restore(self):
-        if self.parent().isMaximized():
-            self.parent().showNormal()
+        if self.parent_window.isMaximized():
+            self.parent_window.showNormal()
             self.maximize_button.setText("□")
         else:
-            self.parent().showMaximized()
+            self.parent_window.showMaximized()
             self.maximize_button.setText("❐")
+
+    def close_window(self):
+        self.parent_window.close()
 
     def create_menus(self):
         file_menu = self.menu_bar.addMenu("File")
@@ -279,9 +319,16 @@ class CodeEditorWidget(QWidget):
 class SimpleIDE(QMainWindow):
     def __init__(self, project_path):
         super().__init__()
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        self.setStyleSheet("QMainWindow::separator{ width: 0px; height: 0px; }")
-       
+        
+        # Imposta le dimensioni minime della finestra
+        self.setMinimumSize(800, 600)
+        
+        # Imposta una dimensione iniziale di default
+        self.resize(1200, 800)
+        
+        # Rimuovi eventuali flag che impediscono il ridimensionamento
+        self.setWindowFlags(Qt.Window)
+        
         central_widget = QWidget()
         central_widget.setObjectName("centralWidget")
         central_widget.setStyleSheet("""
@@ -295,13 +342,13 @@ class SimpleIDE(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
-       
+        
         self.file_explorer = FileExplorerWidget(self, project_path)
         self.folder_dialog = QFileDialog
         self.project_manager = ProjectManager(self.folder_dialog, self.file_explorer)
         self.title_bar = TitleBar(self, ide_instance=self)
         main_layout.addWidget(self.title_bar)
-       
+        
         # Splitter orizzontale principale
         self.h_splitter = CosmicSplitter(Qt.Horizontal)
         
@@ -381,12 +428,32 @@ class SimpleIDE(QMainWindow):
         # Initialize detector and thread
         self.detector = CombinedDetector()
         self.detector_thread = None
-       
+        
         self.tabs = tabs_dictionary()
         # Connetti i pulsanti nel dock widget
         self.start_button.clicked.connect(self.start_detector)
         self.stop_button.clicked.connect(self.stop_detector)
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Aggiorna il dock widget quando la finestra viene ridimensionata
+        if hasattr(self, 'dock_widget') and self.dock_widget.isVisible():
+            self.update_dock_widget_style(self.dockWidgetArea(self.dock_widget))
+        
+        # Aggiorna le proporzioni dei splitter
+        total_width = self.width()
+        total_height = self.height()
+        
+        # Mantieni le proporzioni del file explorer (circa 20% della larghezza)
+        file_explorer_width = int(total_width * 0.2)
+        editor_width = total_width - file_explorer_width
+        self.h_splitter.setSizes([file_explorer_width, editor_width])
+        
+        # Mantieni le proporzioni del terminale (circa 25% dell'altezza)
+        editor_height = int(total_height * 0.75)
+        terminal_height = total_height - editor_height
+        self.v_splitter.setSizes([editor_height, terminal_height])
+        
     def create_dock_widget(self):
         self.dock_widget = QDockWidget("Voice Assistant", self)
         self.dock_widget.setAllowedAreas(Qt.AllDockWidgetAreas)
