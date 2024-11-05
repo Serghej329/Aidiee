@@ -47,7 +47,6 @@ class DetectorThread(QThread):
         super().__init__()
         self.detector = detector
         self.stopped = False
-        
 
     def run(self):
         self.detector.start()
@@ -56,15 +55,15 @@ class DetectorThread(QThread):
                 if self.stopped:
                     break
                 self.keyword_detected.emit()
-                
-                if self.detector.silence_detected.wait():  
+
+                if self.detector.silence_detected.wait():
                     if self.stopped:
                         break
                     audio_data = self.detector.get_audio_data()
                     transcription = self.detector.transcribe_audio(audio_data)
                     self.transcription_ready.emit(transcription)
                     self.detector.reset_audio_data()
-                
+
                 self.silence_detected.emit()
                 self.detector.keyword_detected.clear()
                 self.detector.silence_detected.clear()
@@ -82,10 +81,10 @@ class TitleBar(QWidget):
         self.parent_window = parent
         self.pressing = False
         self.start = QPoint(0, 0)
-        
+
         # Abilita il tracciamento del mouse per il drag
         self.setMouseTracking(True)
-        
+
         self.setStyleSheet("""
             background-color: #2C2D3A;
             color: #E0E0E0;
@@ -107,11 +106,11 @@ class TitleBar(QWidget):
         layout.addWidget(self.menu_bar)
 
         # Spacer
-        layout.addSpacerItem(QSpacerItem(60, 30, QSizePolicy.Expanding ))
+        layout.addSpacerItem(QSpacerItem(60, 30, QSizePolicy.Expanding))
 
         # Window Control Buttons
         self.create_buttons(layout)
-        
+
         # Create Menus
         self.create_menus()
 
@@ -225,7 +224,7 @@ class TitleBar(QWidget):
         new_file_action.triggered.connect(self.ide_instance.create_new_file)
         open_project = file_menu.addAction("Open Project")
         open_project.triggered.connect(lambda: self.ide_instance.project_manager.open_project(self))
-        
+
         file_menu.addAction("Save")
         file_menu.addSeparator()
         file_menu.addAction("Exit")
@@ -240,18 +239,18 @@ class TitleBar(QWidget):
 
         view_menu = self.menu_bar.addMenu("View")
         editor_template_menu = view_menu.addMenu("Editor Template")
-        
+
         styles = ["monokai", "default", "friendly", "fruity", "manni", "paraiso-dark", "solarized-dark"]
         for style_name in styles:
             style_action = QAction(style_name, self)
             style_action.triggered.connect(lambda checked, s=style_name: self.ide_instance.change_style(s))
             editor_template_menu.addAction(style_action)
-        
+
         # Add "Dock Widget" toggle action
         dock_widget_action = QAction("Toggle Dock Widget", self)
         dock_widget_action.triggered.connect(self.ide_instance.toggle_dock_widget)
         view_menu.addAction(dock_widget_action)
-        
+
         section_menu = self.menu_bar.addMenu("Section")
         section_menu.addAction("Add Section")
         section_menu.addAction("Remove Section")
@@ -275,8 +274,7 @@ class TitleBar(QWidget):
         help_menu = self.menu_bar.addMenu("Help")
         help_menu.addAction("Documentation")
         help_menu.addAction("About")
-        
-        
+
 class CodeEditorWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -292,7 +290,6 @@ class CodeEditorWidget(QWidget):
             background-color: #2C2D3A;
             border-radius: 10px;
             padding: 10px;
-            
         """)
 
     def set_style(self, style_name):
@@ -310,7 +307,7 @@ class CodeEditorWidget(QWidget):
                 selection-color: #f8f8f2;
                 font-family: 'Fira Code', 'Consolas', monospace;
             }
-            
+
             QTextEdit:focus {
                 border: 1px solid #49483e;
             }
@@ -319,16 +316,16 @@ class CodeEditorWidget(QWidget):
 class SimpleIDE(QMainWindow):
     def __init__(self, project_path):
         super().__init__()
-        
+
         # Imposta le dimensioni minime della finestra
         self.setMinimumSize(800, 600)
-        
+
         # Imposta una dimensione iniziale di default
         self.resize(1200, 800)
-        
-        # Rimuovi eventuali flag che impediscono il ridimensionamento
-        self.setWindowFlags(Qt.Window)
-        
+
+        # Rimuovi la barra del titolo predefinita
+        self.setWindowFlags(Qt.FramelessWindowHint)
+
         central_widget = QWidget()
         central_widget.setObjectName("centralWidget")
         central_widget.setStyleSheet("""
@@ -342,22 +339,22 @@ class SimpleIDE(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         self.file_explorer = FileExplorerWidget(self, project_path)
         self.folder_dialog = QFileDialog
         self.project_manager = ProjectManager(self.folder_dialog, self.file_explorer)
         self.title_bar = TitleBar(self, ide_instance=self)
         main_layout.addWidget(self.title_bar)
-        
+
         # Splitter orizzontale principale
         self.h_splitter = CosmicSplitter(Qt.Horizontal)
-        
+
         # Aggiungi file explorer
         self.h_splitter.addWidget(self.file_explorer)
-        
+
         # Crea splitter verticale per editor e terminale
         self.v_splitter = CosmicSplitter(Qt.Vertical)
-        
+
         # Configura tab widget
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
@@ -393,10 +390,10 @@ class SimpleIDE(QMainWindow):
                 padding: 1.5px;
             }
         """)
-        
+
         # Aggiungi tab widget al splitter verticale
         self.v_splitter.addWidget(self.tab_widget)
-        
+
         # Crea e aggiungi il terminale al splitter verticale
         self.terminal = Terminal(
             parent=self,
@@ -404,19 +401,19 @@ class SimpleIDE(QMainWindow):
             theme='Monokai'
         )
         self.v_splitter.addWidget(self.terminal)
-        
+
         # Imposta le proporzioni del splitter verticale
         self.v_splitter.setSizes([600, 200])  # Modifica questi valori per cambiare le proporzioni
-        
+
         # Aggiungi il splitter verticale al splitter orizzontale
         self.h_splitter.addWidget(self.v_splitter)
-        
+
         # Imposta le dimensioni del splitter orizzontale
         self.h_splitter.setSizes([250, self.width() - 250])
-        
+
         # Aggiungi il splitter orizzontale al layout principale
         main_layout.addWidget(self.h_splitter)
-        
+
         self.button_container = QWidget()
         self.button_container.setMinimumHeight(50)
         button_container_layout = QVBoxLayout(self.button_container)
@@ -424,31 +421,37 @@ class SimpleIDE(QMainWindow):
         button_container_layout.setSpacing(0)
         self.change_style("monokai")
         self.create_dock_widget()
-        
+
         # Initialize detector and thread
         self.detector = CombinedDetector()
         self.detector_thread = None
-        
+
         self.tabs = tabs_dictionary()
         # Connetti i pulsanti nel dock widget
         self.start_button.clicked.connect(self.start_detector)
         self.stop_button.clicked.connect(self.stop_detector)
+
+        # Inizializza l'attributo resize_direction
+        self.resize_direction = None
+        # Inizializza l'attributo old_pos
+        self.old_pos = None
+        
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         # Aggiorna il dock widget quando la finestra viene ridimensionata
         if hasattr(self, 'dock_widget') and self.dock_widget.isVisible():
             self.update_dock_widget_style(self.dockWidgetArea(self.dock_widget))
-        
+
         # Aggiorna le proporzioni dei splitter
         total_width = self.width()
         total_height = self.height()
-        
+
         # Mantieni le proporzioni del file explorer (circa 20% della larghezza)
         file_explorer_width = int(total_width * 0.2)
         editor_width = total_width - file_explorer_width
         self.h_splitter.setSizes([file_explorer_width, editor_width])
-        
+
         # Mantieni le proporzioni del terminale (circa 25% dell'altezza)
         editor_height = int(total_height * 0.75)
         terminal_height = total_height - editor_height
@@ -458,7 +461,7 @@ class SimpleIDE(QMainWindow):
         self.dock_widget = QDockWidget("Voice Assistant", self)
         self.dock_widget.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.dock_widget.setFeatures(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable | QDockWidget.DockWidgetClosable)
-        
+
         self.dock_widget.setStyleSheet("""
             QDockWidget {
                 background-color: #2C2D3A;
@@ -525,15 +528,15 @@ class SimpleIDE(QMainWindow):
                 color: #808080;
             }
         """
-        
+
         self.start_button = QPushButton("Start Assistant")
         self.stop_button = QPushButton("Stop Assistant")
         self.stop_button.setEnabled(False)
-        
+
         for button in [self.start_button, self.stop_button]:
             button.setStyleSheet(button_style)
             control_layout.addWidget(button)
-            
+
         dock_layout.addLayout(control_layout)
 
         # Add spacer to push wave background to the bottom
@@ -550,7 +553,7 @@ class SimpleIDE(QMainWindow):
         self.ai_button = AnimatedCircleButton()
         self.ai_button.setMinimumSize(64, 64)
         self.ai_button.setMaximumSize(120, 120)
-        
+
         button_container = QHBoxLayout()
         button_container.addWidget(self.ai_button, 0, Qt.AlignCenter)
         wave_container_layout.addLayout(button_container)
@@ -591,11 +594,10 @@ class SimpleIDE(QMainWindow):
                 background: none;
             }
         """)
-        
+
         self.dock_widget.setWidget(scroll_area)
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock_widget)
         self.dock_widget.hide()
-
 
     def create_new_file(self):
         self.file_explorer.create_new_file()
@@ -640,13 +642,13 @@ class SimpleIDE(QMainWindow):
             self.detector.keyword_detected.set()
             self.detector.silence_detected.set()
             self.detector_thread.wait()
-            
+
             if self.detector_thread.isRunning():
                 print("Warning: Detector thread did not stop cleanly.")
-            
+
             self.detector.stop()
             self.detector_thread = None
-        
+
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self.status_label.setText("Assistant stopped")
@@ -668,15 +670,14 @@ class SimpleIDE(QMainWindow):
             new_text = transcription
         self.transcription_text.setPlainText(new_text)
         self.status_label.setText("Assistant active - Waiting for 'Alexa'...")
-       # self.ai_button.set_active_state(False)
-       # self.ai_button.set_processing_state(False)
+        #self.ai_button.set_active_state(False)
+        #self.ai_button.set_processing_state(False)
 
     def closeEvent(self, event):
         self.stop_detector()
         event.accept()
 
     def toggle_dock_widget(self):
-        
         if self.dock_widget.isVisible():
             self.dock_widget.hide()
         else:
@@ -692,7 +693,7 @@ class SimpleIDE(QMainWindow):
         screen_size = QApplication.desktop().screenGeometry()
         if self.dock_widget.isFloating():
             # Dimensioni quadrate prestabilite per la modalità floating
-            square_size = 300  
+            square_size = 300
             self.dock_widget.setFixedSize(square_size, square_size)
         else:
             if dock_area == Qt.TopDockWidgetArea:
@@ -705,50 +706,78 @@ class SimpleIDE(QMainWindow):
                 self.dock_widget.setFixedHeight(screen_size.height())
                 self.dock_widget.setFixedWidth(screen_size.width() // 4)
 
-#     def open_project(self):
-#         project_folder = None
-#         project_folder = self.folder_dialog.getExistingDirectory(self,"Open Project", "/")
-#         project_name = os.path.basename(project_folder)
-#         now = datetime.now()
-#         print(now.timestamp())
-#         timestamp = now.timestamp()
-#         #root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-#         #with open(os.path.join(root_path,"/my-projects.aide.json", 'rw')) as file:
-#         all_projects = {"projects": []}
-#         my_projects_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),  "my-projects.aide.json")
-#         if os.path.isfile(my_projects_path) is False:
-#              all_projects = list(all_projects["projects"])
+    def mousePressEvent(self, event):
+        self.old_pos = event.globalPos()
+        self.resize_direction = self.get_resize_direction(event)
 
-#              all_projects.append({
-#                 "name": os.path.basename(project_folder),
-#                 "path": project_folder,
-#                 "timestamp": timestamp,
-#              })
-#         else:
-#                 with open(my_projects_path) as file:
-#                         all_projects = json.load(file)
-#                         all_projects.append({
-#                                 "name": project_name,
-#                                 "path": project_folder,
-#                                 "timestamp": timestamp,
-#                         })
-#         with open(my_projects_path, 'w') as file:
-#                 json.dump(all_projects, file, indent=4,  separators=(',',': '))
-#         self.file_explorer.update_ui(project_folder)
-#         json_data =  '{"project_name":"'+project_name+'"}'
-#         self.update_project_json(project_folder, json_data)
+    def mouseMoveEvent(self, event):
+        if self.resize_direction:
+            self.resize_window(event)
+        else:
+            if self.old_pos is None:
+                self.old_pos = event.globalPos()
+            delta = QPoint(event.globalPos() - self.old_pos)
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+            self.old_pos = event.globalPos()
 
-#     def update_project_json(self,path, data): #IF DONT EXIST CREATE IT
-#         # Create the full file path with a dot prefix
-#         filename = "project.aide.json"  # Change this to your desired filename
-#         full_path = os.path.join(path, filename)
-#         if sys.platform == "win32" and os.path.exists(full_path):
-#                 FILE_ATTRIBUTE_NORMAL = 0x80
-#                 ctypes.windll.kernel32.SetFileAttributesW(full_path, FILE_ATTRIBUTE_NORMAL)
-#         # Write the JSON file
-#         with open(full_path, 'w') as f:
-#                 json.dump(data, f, indent=4)
-#         # Make file hidden on Windows
-#         if sys.platform == "win32":
-#                 FILE_ATTRIBUTE_HIDDEN = 0x02
-#                 ctypes.windll.kernel32.SetFileAttributesW(full_path, FILE_ATTRIBUTE_HIDDEN)
+    def mouseReleaseEvent(self, event):
+        self.resize_direction = None
+
+    def get_resize_direction(self, event):
+        pos = event.pos()
+        width = self.width()
+        height = self.height()
+        margin = 10
+
+        if pos.x() < margin and pos.y() < margin:
+            return "top_left"
+        elif pos.x() > width - margin and pos.y() < margin:
+            return "top_right"
+        elif pos.x() < margin and pos.y() > height - margin:
+            return "bottom_left"
+        elif pos.x() > width - margin and pos.y() > height - margin:
+            return "bottom_right"
+        elif pos.x() < margin:
+            return "left"
+        elif pos.x() > width - margin:
+            return "right"
+        elif pos.y() < margin:
+            return "top"
+        elif pos.y() > height - margin:
+            return "bottom"
+        else:
+            return None
+
+    def resize_window(self, event):
+        if self.resize_direction == "top_left":
+            print(f"entra in {self.resize_direction}")
+            self.resize(event.x(), event.y())
+            self.move(self.x() + event.x(), self.y() + event.y())
+        elif self.resize_direction == "top_right":
+            print(f"entra in {self.resize_direction}")
+            self.resize(event.x(), event.y())
+            self.move(self.x(), self.y() + event.y())
+        elif self.resize_direction == "bottom_left":
+            print(f"entra in {self.resize_direction}")
+            self.resize(event.x(), event.y())
+            self.move(self.x() + event.x(), self.y())
+            
+        elif self.resize_direction == "bottom_right":
+            print(f"entra in {self.resize_direction}")
+            self.resize(event.x(), event.y())
+            
+        elif self.resize_direction == "left":
+            print(f"entra in {self.resize_direction}")
+            self.resize(self.width() - event.x(), self.height())
+            self.move(self.x() + event.x(), self.y())
+        elif self.resize_direction == "right":
+            print(f"entra in {self.resize_direction}")
+            self.resize(self.width() + event.x(), self.height())
+        elif self.resize_direction == "top":
+            print(f"entra in {self.resize_direction}")
+            self.resize(self.width(), self.height() - event.y())
+            self.move(self.x(), self.y() + event.y())
+        elif self.resize_direction == "bottom":
+            print(f"entra in {self.resize_direction}")
+            self.resize(self.width(), self.height() + event.y())
+            
