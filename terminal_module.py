@@ -144,6 +144,12 @@ class Terminal(QWidget):
         self.toggle_btn = QPushButton("▲")
         self.toggle_btn.clicked.connect(self.toggle_terminal)
         header_layout.addWidget(self.toggle_btn)
+        self.toggle_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {self.config['background_color']};
+                }}
+         """)
+        
         
         self.update_header_style()
         self.main_layout.addWidget(self.header)
@@ -158,6 +164,11 @@ class Terminal(QWidget):
         input_layout = QHBoxLayout(self.input_container)
         input_layout.setContentsMargins(12, 6, 12, 12)
         input_layout.setSpacing(8)
+        self.input_container.setStyleSheet(f"""
+                QWidget{{
+                     background-color: {self.config['background_color']};
+                 }}
+        """)
         
         self.prompt_label = QLabel(f'<a style="color:{self.config['prompt_color']}" href="{self.current_cwd}">{self.current_cwd}</a>>')
         self.prompt_label.linkActivated.connect(os.startfile)
@@ -170,7 +181,7 @@ class Terminal(QWidget):
         self.input_field.setStyleSheet(f"""
                 QLineEdit {{
                 border: none;
-                background-color: transparent;
+                background-color: {self.config['background_color']};
                 padding: 0px;
                 selection-background-color: {self.config['selection_color']};
                 }}
@@ -230,9 +241,13 @@ class Terminal(QWidget):
                 border-bottom-right-radius: 0px;
                 border-bottom-left-radius: 0px;
             }}
-           QLabel{{
+            QLabel{{
                 border-radius: {self.config['border_radius']}px;
             }}
+            QPushButton{{
+                background-color: {self.config['background_color']};
+            }}
+            
         """)
         
         for i in range(self.header.layout().count()):
@@ -259,8 +274,14 @@ class Terminal(QWidget):
                 border-top-right-radius: 0px;
                 border-top-left-radius: 0px;
             }}
-            QLabel{{
+
+            QLabel {{
                 border-radius: {self.config['border_radius']}px;
+            }}
+        """)
+        self.input_container.setStyleSheet(f"""
+            QWidget{{
+                background-color: {self.config['background_color']};
             }}
         """)
         

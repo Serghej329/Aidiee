@@ -82,12 +82,14 @@ class TitleBar(QWidget):
         self.pressing = False
         self.start = QPoint(0, 0)
 
-        # Abilita il tracciamento del mouse per il drag
+      
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
         self.setMouseTracking(True)
-
+        
         self.setStyleSheet("""
-            background-color: #2C2D3A;
+            background-color: transparent;
             color: #E0E0E0;
+            padding: 5px;
         """)
 
         layout = QHBoxLayout(self)
@@ -119,6 +121,7 @@ class TitleBar(QWidget):
             QMenuBar {
                 background-color: transparent;
                 color: #E0E0E0;
+                padding: 5px;
             }
             QMenuBar::item {
                 padding: 5px 10px;
@@ -189,12 +192,12 @@ class TitleBar(QWidget):
         if event.button() == Qt.LeftButton:
             self.pressing = True
             self.start = event.globalPos()
-            self.window_pos = self.parent_window.pos()
 
     def mouseMoveEvent(self, event):
-        if self.pressing and not self.parent_window.isMaximized():
+        if self.pressing:
             delta = event.globalPos() - self.start
-            self.parent_window.move(self.window_pos + delta)
+            self.parent_window.move(self.parent_window.pos() + delta)
+            self.start = event.globalPos()
 
     def mouseReleaseEvent(self, event):
         self.pressing = False
@@ -316,14 +319,17 @@ class CodeEditorWidget(QWidget):
 class SimpleIDE(QMainWindow):
     def __init__(self, project_path):
         super().__init__()
-
-        # Imposta le dimensioni minime della finestra
+        self.margin = 5  # Define margin size as class attribute
+        self.setStyleSheet(f"""
+            background-color: #2C2D3A;
+            padding: {self.margin};
+        """)
+        
+        # Manteniamo il mouse tracking per il resize
+        self.setMouseTracking(True)
+        
         self.setMinimumSize(800, 600)
-
-        # Imposta una dimensione iniziale di default
         self.resize(1200, 800)
-
-        # Rimuovi la barra del titolo predefinita
         self.setWindowFlags(Qt.FramelessWindowHint)
 
         central_widget = QWidget()
@@ -343,6 +349,7 @@ class SimpleIDE(QMainWindow):
         self.file_explorer = FileExplorerWidget(self, project_path)
         self.folder_dialog = QFileDialog
         self.project_manager = ProjectManager(self.folder_dialog, self.file_explorer)
+        # todo
         self.title_bar = TitleBar(self, ide_instance=self)
         main_layout.addWidget(self.title_bar)
 
@@ -433,8 +440,9 @@ class SimpleIDE(QMainWindow):
 
         # Inizializza l'attributo resize_direction
         self.resize_direction = None
-        # Inizializza l'attributo old_pos
+        self.resizing = False
         self.old_pos = None
+        
         
 
     def resizeEvent(self, event):
@@ -707,77 +715,100 @@ class SimpleIDE(QMainWindow):
                 self.dock_widget.setFixedWidth(screen_size.width() // 4)
 
     def mousePressEvent(self, event):
-        self.old_pos = event.globalPos()
-        self.resize_direction = self.get_resize_direction(event)
+        # Get resize direction based on click position
+        self.resize_direction = self.get_resize_direction(event.pos())
+        if self.resize_direction:
+            self.resizing = True
+            self.old_pos = event.globalPos()
+            event.accept()
 
     def mouseMoveEvent(self, event):
-        if self.resize_direction:
+        pos = event.pos()
+        
+        if self.resizing and self.resize_direction:
+            # Handle resize operation
             self.resize_window(event)
         else:
-            if self.old_pos is None:
-                self.old_pos = event.globalPos()
-            delta = QPoint(event.globalPos() - self.old_pos)
-            self.move(self.x() + delta.x(), self.y() + delta.y())
-            self.old_pos = event.globalPos()
+            # Update cursor based on position
+            resize_direction = self.get_resize_direction(pos)
+            
+            # Set cursor shape based on region
+            if resize_direction == (Qt.LeftEdge | Qt.TopEdge) or \
+               resize_direction == (Qt.RightEdge | Qt.BottomEdge):
+                self.setCursor(Qt.SizeFDiagCursor)
+            elif resize_direction == (Qt.RightEdge | Qt.TopEdge) or \
+                 resize_direction == (Qt.LeftEdge | Qt.BottomEdge):
+                self.setCursor(Qt.SizeBDiagCursor)
+            elif resize_direction in (Qt.LeftEdge, Qt.RightEdge):
+                self.setCursor(Qt.SizeHorCursor)
+            elif resize_direction in (Qt.TopEdge, Qt.BottomEdge):
+                self.setCursor(Qt.SizeVerCursor)
+            else:
+                self.setCursor(Qt.ArrowCursor)
+
 
     def mouseReleaseEvent(self, event):
+        self.resizing = False
         self.resize_direction = None
+        self.setCursor(Qt.ArrowCursor)
+        
 
-    def get_resize_direction(self, event):
-        pos = event.pos()
+    def get_resize_direction(self, pos):
+        """Determine resize direction based on mouse position"""
         width = self.width()
         height = self.height()
-        margin = 10
+        
+        # Check if we're in the margin areas
+        in_left_margin = 0 <= pos.x() <= self.margin
+        in_right_margin = width - self.margin <= pos.x() <= width
+        in_top_margin = 0 <= pos.y() <= self.margin
+        in_bottom_margin = height - self.margin <= pos.y() <= height
 
-        if pos.x() < margin and pos.y() < margin:
-            return "top_left"
-        elif pos.x() > width - margin and pos.y() < margin:
-            return "top_right"
-        elif pos.x() < margin and pos.y() > height - margin:
-            return "bottom_left"
-        elif pos.x() > width - margin and pos.y() > height - margin:
-            return "bottom_right"
-        elif pos.x() < margin:
-            return "left"
-        elif pos.x() > width - margin:
-            return "right"
-        elif pos.y() < margin:
-            return "top"
-        elif pos.y() > height - margin:
-            return "bottom"
-        else:
-            return None
-
+        # Determine resize direction based on margins
+        if in_left_margin and in_top_margin:
+            return Qt.TopEdge | Qt.LeftEdge
+        if in_right_margin and in_top_margin:
+            return Qt.TopEdge | Qt.RightEdge
+        if in_left_margin and in_bottom_margin:
+            return Qt.BottomEdge | Qt.LeftEdge
+        if in_right_margin and in_bottom_margin:
+            return Qt.BottomEdge | Qt.RightEdge
+        if in_left_margin:
+            return Qt.LeftEdge
+        if in_right_margin:
+            return Qt.RightEdge
+        if in_top_margin:
+            return Qt.TopEdge
+        if in_bottom_margin:
+            return Qt.BottomEdge
+            
+        return None
+    
     def resize_window(self, event):
-        if self.resize_direction == "top_left":
-            print(f"entra in {self.resize_direction}")
-            self.resize(event.x(), event.y())
-            self.move(self.x() + event.x(), self.y() + event.y())
-        elif self.resize_direction == "top_right":
-            print(f"entra in {self.resize_direction}")
-            self.resize(event.x(), event.y())
-            self.move(self.x(), self.y() + event.y())
-        elif self.resize_direction == "bottom_left":
-            print(f"entra in {self.resize_direction}")
-            self.resize(event.x(), event.y())
-            self.move(self.x() + event.x(), self.y())
-            
-        elif self.resize_direction == "bottom_right":
-            print(f"entra in {self.resize_direction}")
-            self.resize(event.x(), event.y())
-            
-        elif self.resize_direction == "left":
-            print(f"entra in {self.resize_direction}")
-            self.resize(self.width() - event.x(), self.height())
-            self.move(self.x() + event.x(), self.y())
-        elif self.resize_direction == "right":
-            print(f"entra in {self.resize_direction}")
-            self.resize(self.width() + event.x(), self.height())
-        elif self.resize_direction == "top":
-            print(f"entra in {self.resize_direction}")
-            self.resize(self.width(), self.height() - event.y())
-            self.move(self.x(), self.y() + event.y())
-        elif self.resize_direction == "bottom":
-            print(f"entra in {self.resize_direction}")
-            self.resize(self.width(), self.height() + event.y())
+        if not self.resize_direction:
+            return
+
+        delta = event.globalPos() - self.old_pos
+        x = self.x()
+        y = self.y()
+        width = self.width()
+        height = self.height()
+
+        if self.resize_direction & Qt.LeftEdge:
+            if width - delta.x() >= self.minimumWidth():
+                x += delta.x()
+                width -= delta.x()
+        if self.resize_direction & Qt.RightEdge:
+            if width + delta.x() >= self.minimumWidth():
+                width += delta.x()
+        if self.resize_direction & Qt.TopEdge:
+            if height - delta.y() >= self.minimumHeight():
+                y += delta.y()
+                height -= delta.y()
+        if self.resize_direction & Qt.BottomEdge:
+            if height + delta.y() >= self.minimumHeight():
+                height += delta.y()
+
+        self.setGeometry(x, y, width, height)
+        self.old_pos = event.globalPos() 
             
