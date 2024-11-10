@@ -16,7 +16,7 @@ Thumbs.db
 # Aggiungi qui gli altri editor che utilizzi (es: Sublime Text, VS Code)
 .idea/
 .vscode/
-
+my-projects.aide.json
 # Ignora la cartella del modello e tutto ciò che inizia con "models"
 models/*.pt
 

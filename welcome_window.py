@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt, QPoint, QPointF, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont, QPainter, QPen, QColor, QLinearGradient, QPolygonF
 from file_explorer_widget import FileExplorerWidget
 from projects import ProjectManager
-from simple_ide import SimpleIDE
+from Aidee import SimpleIDE
 from neumorphic_widgets import NeumorphicButton
 
 
