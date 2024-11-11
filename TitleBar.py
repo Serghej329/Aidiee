@@ -75,8 +75,8 @@ class CustomTitleBar(StandardTitleBar):
         assistant_menu = self.menuBar.addMenu("Aidee Assistant")
         assistant_start = assistant_menu.addAction("Start")
         assistant_stop = assistant_menu.addAction("Stop")
-        assistant_start.triggered.connect(lambda: self.ide_instance.start_detector)
-        assistant_stop.triggered.connect(lambda: self.ide_instance.stop_detector)
+        assistant_start.triggered.connect(self.ide_instance.start_detector)
+        assistant_stop.triggered.connect(self.ide_instance.stop_detector)
 
         help_menu = self.menuBar.addMenu("Help")
         help_menu.addAction("Documentation")
@@ -157,4 +157,3 @@ class CustomTitleBar(StandardTitleBar):
                 background-color: #e81123;
             }}
         """)
-        

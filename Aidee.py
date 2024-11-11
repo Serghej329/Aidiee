@@ -5,7 +5,7 @@ import json
 import ctypes
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QTabWidget,QFileDialog
+    QWidget, QVBoxLayout, QTabWidget, QFileDialog
 )
 from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
@@ -59,22 +59,23 @@ class DetectorThread(QThread):
         self.detector.keyword_detected.set()
         self.detector.silence_detected.set()
 
+
 class SimpleIDE(FramelessMainWindow):
-    def __init__(self,project_path):
+    def __init__(self, project_path):
         super().__init__()
         self.setWindowTitle("Aidee")
-        #Creating modules objects
+        # Creating modules objects
         self.project_path = project_path
         self.file_explorer = FileExplorerWidget(self, self.project_path)
         self.folder_dialog = QFileDialog
         self.project_manager = ProjectManager(self.folder_dialog, self.file_explorer)
-        #Setting the style for the window and building the ui
+        # Setting the style for the window and building the ui
         self.setMinimumSize(800, 600)
         self.resize(1200, 800)
         self.setup_ui()
         self.apply_styles()
         self.titleBar.raise_()
-        
+
     def setup_ui(self):
         self.central_widget = QWidget()
         self.central_widget.setObjectName("centralWidget")
@@ -130,17 +131,18 @@ class SimpleIDE(FramelessMainWindow):
         for index in range(self.tab_widget.count()):
             editor_widget = self.tab_widget.widget(index)
             editor_widget.set_style(style_name)
+
     def start_detector(self):
+        if self.detector_thread and self.detector_thread.isRunning():
+            return
+
         self.detector_thread = DetectorThread(self.detector)
-        self.detector_thread.keyword_detected.connect(self.on_keyword_detected)
-        self.detector_thread.silence_detected.connect(self.on_silence_detected)
-        self.detector_thread.transcription_ready.connect(self.on_transcription_ready)
+        self.detector_thread.keyword_detected.connect(self.voice_assistant_dock.on_keyword_detected)
+        self.detector_thread.silence_detected.connect(self.voice_assistant_dock.on_silence_detected)
+        self.detector_thread.transcription_ready.connect(self.voice_assistant_dock.on_transcription_ready)
         self.detector_thread.start()
         self.stopped = False
-        self.voice_assistant_dock.start_button.setEnabled(False)
-        self.voice_assistant_dock.stop_button.setEnabled(True)
         self.voice_assistant_dock.status_label.setText("Assistant active - Waiting for 'Alexa'...")
-        #self.ai_button.start_animation()
 
     def stop_detector(self):
         if self.detector_thread:
@@ -156,17 +158,16 @@ class SimpleIDE(FramelessMainWindow):
             self.detector.stop()
             self.detector_thread = None
 
-        self.voice_assistant_dock.start_button.setEnabled(True)
-        self.voice_assistant_dock.stop_button.setEnabled(False)
         self.voice_assistant_dock.status_label.setText("Assistant stopped")
-        #self.ai_button.stop_animation()
+        # self.ai_button.stop_animation()
+
     def on_keyword_detected(self):
         self.voice_assistant_dock.status_label.setText("Alexa detected! Listening...")
-        #self.ai_button.set_active_state(True)
+        # self.ai_button.set_active_state(True)
 
     def on_silence_detected(self):
         self.voice_assistant_dock.status_label.setText("Processing audio...")
-        #self.ai_button.set_processing_state(True)
+        # self.ai_button.set_processing_state(True)
 
     def on_transcription_ready(self, transcription):
         current_text = self.voice_assistant_dock.transcription_text.toPlainText()
@@ -176,8 +177,8 @@ class SimpleIDE(FramelessMainWindow):
             new_text = transcription
         self.voice_assistant_dock.transcription_text.setPlainText(new_text)
         self.voice_assistant_dock.status_label.setText("Assistant active - Waiting for 'Alexa'...")
-        #self.ai_button.set_active_state(False)
-        #self.ai_button.set_processing_state(False)
+        # self.ai_button.set_active_state(False)
+        # self.ai_button.set_processing_state(False)
 
     def create_new_file(self):
         self.file_explorer.create_new_file()
@@ -202,6 +203,7 @@ class SimpleIDE(FramelessMainWindow):
     def close_tab(self, index):
         self.tab_widget.removeTab(index)
         self.tabs.remove_tab(self.tabs.get_tab_by_index(index + 1))
+
     def closeEvent(self, event):
         self.stop_detector()
         event.accept()
