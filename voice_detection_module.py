@@ -9,9 +9,6 @@ import noisereduce as nr
 from pydub import AudioSegment
 from io import BytesIO
 
-#FIXME - FutureWarning: You are using `torch.load` with `weights_only=False`
-#               Refer to : https://github.com/JaidedAI/EasyOCR/issues/1297
-
 class CombinedDetector:
     def __init__(self, rate=16000, chunk_size=1280, silence_threshold=-50, 
                  silence_duration=1.2, history_s=0.5, max_buffer_s=300, 
@@ -36,20 +33,13 @@ class CombinedDetector:
         self.whisper_model_version = whisper_model_version
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"Using device: {self.device}")
-        self.whisper_model = whisper.load_model(self.whisper_model_version, 
-                                              download_root=self.whisper_model_dir, 
-                                              device=self.device, 
-                                              in_memory=True)
+        self.whisper_model = None  # Initialize as None
         
         # Get Whisper's maximum input length in seconds
         self.whisper_max_length = 30  # Whisper typically handles 30 seconds segments well
         
         self.audio = pyaudio.PyAudio()
-        self.stream = self.audio.open(format=pyaudio.paInt16,
-                                    channels=1,
-                                    rate=self.rate,
-                                    input=True,
-                                    frames_per_buffer=self.chunk_size)
+        self.stream = None  # Initialize as None
         
         self.lock = threading.Lock()
         self.running = False
@@ -59,10 +49,9 @@ class CombinedDetector:
         # Initialize OpenWakeWord model
         self.oww_model = Model(wakeword_models=[os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "alexa_v0.1.onnx")], inference_framework="onnx")    
 
-    
     def get_db(self, audio_data):
         if audio_data.dtype == np.int16:
-            #Convert audio from int16 to float32 and normalize to float values between -1.0 and +1.0
+            # Convert audio from int16 to float32 and normalize to float values between -1.0 and +1.0
             audio_data = audio_data.astype(np.float32) / 32768.0 
         return 20 * np.log10(np.sqrt(np.mean(np.square(audio_data))) + 1e-10)
     
@@ -107,6 +96,11 @@ class CombinedDetector:
                                     rate=self.rate,
                                     input=True,
                                     frames_per_buffer=self.chunk_size)
+        # Load Whisper model
+        self.whisper_model = whisper.load_model(self.whisper_model_version, 
+                                              download_root=self.whisper_model_dir, 
+                                              device=self.device, 
+                                              in_memory=True)
         self.thread.start()
     
     def stop(self):
@@ -122,6 +116,9 @@ class CombinedDetector:
             self.audio.terminate()
         except Exception as e:
             print(f"Error during stop: {e}")
+        
+        # Unload Whisper model
+        self.whisper_model = None
 
     def get_audio_data(self):
         return np.concatenate(self.audio_buffer)
@@ -136,6 +133,7 @@ class CombinedDetector:
         self.silent_chunks = 0
         self.voiced_chunks = 0
         self.oww_model.reset()
+    
     def process_audio(self, audio_data):
         """Process audio data with noise reduction and silence trimming."""
         # Convert to float32 if needed
@@ -163,6 +161,7 @@ class CombinedDetector:
                     break
         
         return reduced_noise
+    
     def transcribe_audio(self, audio):
         """Transcribe audio with handling for long recordings."""
         # Process audio with noise reduction and silence trimming
