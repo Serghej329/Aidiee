@@ -15,18 +15,29 @@ class CodeEditorWidget(QWidget):
         self.highlighter = PythonHighlighter(self.code_editor.document())
         layout.addWidget(self.code_editor)
         self.setLayout(layout)
+        style = get_style_by_name("monokai")
+        self.background_color = QColor(style.background_color)
+        self.default_color = QColor(style.name)
+        self.highlight_color = QColor(style.highlight_color)
+
+        if (self.background_color.lightness() >= 50): # If the background is light:
+                self.selection_color = self.highlight_color.darker(150)# Slightly darker version of the highlight color
+        else:                                                                      #If the background is dark:
+                self.selection_color = self.highlight_color.lighter(150)# Slightly lighter version of the highlight color
 
         # Apply neumorphic style to the CodeEditorWidget
         self.setStyleSheet("""
             background-color: #2C2D3A;
-            border-radius: 10px;
+            border-top-right-radius:10px;
+            border-bottom-right-radius:10px;
             padding: 10px;
         """)
 
         # Add line numbers
-        self.line_numbers = LineNumbers(self.code_editor)
+        self.line_numbers = LineNumbers(self.code_editor,parent=self)
         editor_layout = QHBoxLayout()
         editor_layout.setContentsMargins(0, 0, 0, 0)
+        editor_layout.setSpacing(0)
         editor_layout.addWidget(self.line_numbers)
         editor_layout.addWidget(self.code_editor)
         layout.addLayout(editor_layout)
@@ -34,26 +45,34 @@ class CodeEditorWidget(QWidget):
     def set_style(self, style_name):
         self.highlighter = PythonHighlighter(self.code_editor.document(), style_name=style_name)
         style = get_style_by_name(style_name)
-        background_color = style.background_color
-        default_color = style.highlight_color
-        highlight_color = QColor(210, 225, 255)
-        self.code_editor.setStyleSheet("""
-            QTextEdit {
-                background-color: #272822;  /* Monokai background */
-                color: #f8f8f2;            /* Monokai default text */
-                border-radius: 10px;
-                padding: 10px;
-                selection-background-color: #49483e;  /* Monokai selection */
-                selection-color: #f8f8f2;
-                font-family: 'Fira Code', 'Consolas', monospace;
-            }
+        self.background_color = QColor(style.background_color)
+        self.default_color = QColor(style.name)
+        self.highlight_color = QColor(style.highlight_color)
 
+        if (self.background_color.lightness() >= 50): # If the background is light:
+                self.selection_color = self.highlight_color.darker(150)# Slightly darker version of the highlight color
+        else:                                                                      #If the background is dark:
+                self.selection_color = self.highlight_color.lighter(150)# Slightly lighter version of the highlight color
+
+        self.code_editor.setStyleSheet("""
+            QPlainTextEdit {
+                border-top-right-radius:10px;
+                border-bottom-right-radius:10px;            
+                padding: 10px;
+                font-family: 'Fira Code', 'Consolas', monospace;
+                margin:0
+            }
+        
+                
             QTextEdit:focus {
                 border: 1px solid #49483e;
             }
         """)
-        self.line_numbers.highlight_color = QColor(default_color)
-        self.line_numbers.line_number_color = highlight_color
+        self.code_editor.setStyleSheet(f"selection-background-color: {self.selection_color.name()};background-color: {self.background_color.name()};color: {self.default_color.name()}")
+
+        self.line_numbers.highlight_color = self.highlight_color
+        self.line_numbers.line_number_color = QColor(210, 225, 255)
+        self.line_numbers.highlight_current_line();
 
     def blinkLine(self, line_number, blink_color):
         self.line_numbers.goToLine(line_number)
