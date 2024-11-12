@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from neumorphic_widgets import NeumorphicWidget, NeumorphicTextEdit
 from animated_wave_background import AnimatedWaveBackground
-from animated_circle_button2 import SimpleVoiceButton
+from animated_circle_button import SimpleVoiceButton
 from PyQt5.QtWidgets import QLabel, QGraphicsDropShadowEffect
 
 class VoiceAssistantDock(QDockWidget):
