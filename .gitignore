@@ -1,8 +1,13 @@
 # Ignora file e cartelle generati da Python
+__pycache__/
 __pycache__
+*.pyc
+
 *.pyc
 *.pyo
 .pytest_cache/
+
+
 
 # Ignora file di cache e temporanei
 .DS_Store
