@@ -121,7 +121,7 @@ class SimpleIDE(FramelessMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.voice_assistant_dock)
 
         # Initialize detector and thread
-        self.detector = CombinedDetector()
+        self.detector = CombinedDetector(whisper_model_version="medium")
         self.detector_thread = None
 
         self.tabs = tabs_dictionary()
@@ -188,7 +188,7 @@ class SimpleIDE(FramelessMainWindow):
             editor_widget = CodeEditorWidget()
             with open(file_path, "r", encoding="utf8") as f:
                 file_content = f.read()
-            editor_widget.code_editor.setText(file_content)
+            editor_widget.code_editor.setPlainText(file_content)
             file_name = os.path.basename(file_path)
             if not self.tabs.tab_exists(file_name):
                 self.tab_widget.addTab(editor_widget, file_name)

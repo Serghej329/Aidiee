@@ -1,6 +1,6 @@
 from PyQt5.QtGui import QTextCharFormat, QSyntaxHighlighter, QColor, QFont
 from pygments import highlight
-from pygments.lexers import PythonLexer
+from pygments.lexers import Python3Lexer
 from pygments.formatter import Formatter
 from pygments.styles import get_style_by_name
 from pygments.token import Token
@@ -37,7 +37,7 @@ class PygmentsFormatter(Formatter):
 class PythonHighlighter(QSyntaxHighlighter):
     def __init__(self, document, style_name='monokai'):
         super().__init__(document)
-        self.lexer = PythonLexer()
+        self.lexer = Python3Lexer()
         self.formatter = PygmentsFormatter(self, style_name)
 
     def highlightBlock(self, text):
