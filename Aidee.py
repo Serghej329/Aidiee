@@ -121,7 +121,7 @@ class SimpleIDE(FramelessMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.voice_assistant_dock)
 
         # Initialize detector and thread
-        self.detector = CombinedDetector(whisper_model_version="medium")
+        self.detector = CombinedDetector(whisper_model_version="base")
         self.detector_thread = None
 
         self.tabs = tabs_dictionary()

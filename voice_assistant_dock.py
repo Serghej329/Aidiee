@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QDockWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QSpacerItem, QSizePolicy, QWidget, QScrollArea, QApplication
+    QSpacerItem, QSizePolicy, QWidget, QScrollArea, QApplication, QLineEdit
 )
 from PyQt5.QtCore import Qt
 from neumorphic_widgets import NeumorphicWidget, NeumorphicTextEdit
@@ -80,6 +80,19 @@ class VoiceAssistantDock(QDockWidget):
         self._setup_status_label(content_layout)
         self._setup_transcription_area(content_layout)
 
+        # Create the textbox below transcription area
+        self.textbox = QLineEdit(self)
+        self.textbox.setPlaceholderText("Type your command...")
+        self.textbox.setStyleSheet("""
+            QLineEdit {
+                background-color: #1E1F2B;
+                color: #E0E0E0;
+                border-radius: 5px;
+                padding: 8px;
+            }
+        """)
+        content_layout.addWidget(self.textbox)
+
         # Create scroll area
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -132,10 +145,12 @@ class VoiceAssistantDock(QDockWidget):
         self.ai_button.raise_()
         
         bottom_layout.addWidget(interaction_container)
+
         main_layout.addWidget(bottom_widget, 0)
 
         self.setWidget(main_widget)
         interaction_container.resizeEvent = lambda e: self._handle_resize(e, interaction_container)
+
 
     def _setup_status_label(self, layout):
         """Set up the status label"""
