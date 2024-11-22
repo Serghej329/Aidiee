@@ -119,6 +119,7 @@ class CustomTitleBar(StandardTitleBar):
             QMenuBar::item {{
                 background-color: transparent;
                 padding: 5px 10px;
+                border-radius: 5px;
             }}
             
             QMenuBar::item:selected {{

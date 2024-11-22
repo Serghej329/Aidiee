@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import (
     QDockWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QSpacerItem, QSizePolicy, QWidget, QScrollArea, QApplication, QLineEdit
+    QSpacerItem, QSizePolicy, QWidget, QScrollArea, QApplication, QLineEdit, QPlainTextEdit, QSplitter, QMenu
 )
 from PyQt5.QtCore import Qt
-from neumorphic_widgets import NeumorphicWidget, NeumorphicTextEdit
+from neumorphic_widgets import NeumorphicWidget, NeumorphicButton, NeumorphicComboBox, NeumorphicTextEdit
 from animated_wave_background import AnimatedWaveBackground
 from animated_circle_button import SimpleVoiceButton
 from PyQt5.QtWidgets import QLabel, QGraphicsDropShadowEffect
@@ -38,6 +38,7 @@ class VoiceAssistantDock(QDockWidget):
                 text-align: left;
             }
         """)
+        
         # Minimalist neumorphic styling for the title
         title_widget = NeumorphicWidget()
         title_layout = QHBoxLayout(title_widget)
@@ -70,30 +71,56 @@ class VoiceAssistantDock(QDockWidget):
         main_layout.setContentsMargins(5, 5, 5, 5)
         main_layout.setSpacing(5)
 
-        # Create content widget that will be scrollable
+        # Widget contenitore - scorrevole
         content_widget = NeumorphicWidget()
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(5, 5, 5, 5)
         content_layout.setSpacing(5)
 
-        # Add UI elements to content layout
         self._setup_status_label(content_layout)
-        self._setup_transcription_area(content_layout)
 
-        # Create the textbox below transcription area
-        self.textbox = QLineEdit(self)
-        self.textbox.setPlaceholderText("Type your command...")
+        # Splitter per l'area di chat e la casella di testo
+        splitter = QSplitter(Qt.Vertical)
+        splitter.setStyleSheet("""
+            QSplitter::handle {
+                background-color: #4c3d4d;
+                height: 5px;
+            }
+        """)
+
+        # Configura l'area di testo della chat
+        self.chat_text = NeumorphicTextEdit()
+        self.chat_text.setReadOnly(True)
+        self.chat_text.setMinimumHeight(100)
+        self.chat_text.setStyleSheet("""
+            QTextEdit {
+                background-color: #1E1F2B;
+                border: none;
+                padding: 8px;
+                color: #E0E0E0;
+            }
+        """)
+        splitter.addWidget(self.chat_text)
+
+        # textbox below transcription area
+        self.textbox = QPlainTextEdit(self)
+        self.textbox.setPlaceholderText("Digita il tuo comando...")
         self.textbox.setStyleSheet("""
-            QLineEdit {
+            QPlainTextEdit {
                 background-color: #1E1F2B;
                 color: #E0E0E0;
-                border-radius: 5px;
                 padding: 8px;
             }
         """)
-        content_layout.addWidget(self.textbox)
+        self.textbox.setMinimumHeight(50)
+        splitter.addWidget(self.textbox)
 
-        # Create scroll area
+        # Imposta le dimensioni iniziali per il splitter
+        splitter.setSizes([200, 50])
+
+        content_layout.addWidget(splitter)
+
+        # Scroll area
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(content_widget)
@@ -124,7 +151,7 @@ class VoiceAssistantDock(QDockWidget):
 
         main_layout.addWidget(scroll_area, 1)
 
-        # Create a unified container for both button and waves
+        # Unified container for both button and waves
         bottom_widget = NeumorphicWidget()
         bottom_widget.setMinimumHeight(100)
         bottom_layout = QVBoxLayout(bottom_widget)
@@ -154,33 +181,42 @@ class VoiceAssistantDock(QDockWidget):
 
     def _setup_status_label(self, layout):
         """Set up the status label"""
-        self.status_label = QLabel("Assistant not active")
+        status_layout = QHBoxLayout()
+        status_layout.setContentsMargins(0, 0, 0, 0)
+        status_layout.setSpacing(5)
+
+        self.status_label = QLabel("Assistente non attivo")
         self.status_label.setStyleSheet("""
             QLabel {
                 color: #E0E0E0;
                 padding: 5px;
             }
         """)
-        layout.addWidget(self.status_label)
+        status_layout.addWidget(self.status_label)
 
-    def _setup_transcription_area(self, layout):
-        """Set up the transcription text area"""
-        self.transcription_text = NeumorphicTextEdit()
-        self.transcription_text.setReadOnly(True)
-        self.transcription_text.setMinimumHeight(100)
-        self.transcription_text.setStyleSheet("""
-            QTextEdit {
-                background-color: #1E1F2B;
-                border: none;
-                border-radius: 5px;
-                padding: 8px;
+        # Aggiunge un piccolo pulsante a destra della label di stato
+        self.menu_button = QPushButton("▼")
+        self.menu_button.setFixedSize(20, 20)
+        self.menu_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3D3E4D;
                 color: #E0E0E0;
+                border: none;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #4D4E5D;
             }
         """)
-        layout.addWidget(self.transcription_text)
+        self.menu_button.clicked.connect(self.show_menu)
+        status_layout.addWidget(self.menu_button)
+
+        status_widget = QWidget()
+        status_widget.setLayout(status_layout)
+        layout.addWidget(status_widget)
 
     def _handle_resize(self, event, container):
-        """Handle resize events for the interaction container"""
+        """Gestisce gli eventi di ridimensionamento per il QSplitter"""
         self.wave_background.setGeometry(0, 0, container.width(), container.height())
         
         self.ai_button.move(
@@ -203,12 +239,12 @@ class VoiceAssistantDock(QDockWidget):
 
     def on_transcription_ready(self, transcription):
         """Handle transcription ready"""
-        current_text = self.transcription_text.toPlainText()
+        current_text = self.textbox.toPlainText()
         if current_text:
             new_text = f"{current_text}\n{transcription}"
         else:
             new_text = transcription
-        self.transcription_text.setPlainText(new_text)
+        self.textbox.setPlainText(new_text)
         self.status_label.setText("Assistant active - Waiting for 'Alexa'...")
 
     def toggle_visibility(self):
@@ -217,3 +253,36 @@ class VoiceAssistantDock(QDockWidget):
             self.hide()
         else:
             self.show()
+
+    def show_menu(self):
+        """Menu dei modelli con gestione del cambio modello"""
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #2C2D3A;
+                border: none;
+                padding: 5px;
+                color: #E0E0E0;
+            }
+            QMenu::item {
+                padding: 10px;
+                text-align: left;
+                border-radius:5px;
+            }
+            QMenu::item:selected {
+                background-color: #3D3E4D;
+            }
+        """)
+        
+
+        menu.addAction("Base")
+        menu.addAction("Medium")
+        menu.addAction("Advanced")
+        
+        
+        """Posizione corretta del btn"""
+        menu.exec_(self.menu_button.mapToGlobal(self.menu_button.rect().bottomLeft()))
+        # self.ide_instance.CombineDetector.whisper_model_version = "large"
+       
+
+        
