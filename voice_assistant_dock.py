@@ -3,10 +3,12 @@ from PyQt5.QtWidgets import (
     QSpacerItem, QSizePolicy, QWidget, QScrollArea, QApplication, QLineEdit, QPlainTextEdit, QSplitter, QMenu
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QLabel, QGraphicsDropShadowEffect
 from neumorphic_widgets import NeumorphicWidget, NeumorphicButton, NeumorphicComboBox, NeumorphicTextEdit
 from animated_wave_background import AnimatedWaveBackground
 from animated_circle_button import SimpleVoiceButton
-from PyQt5.QtWidgets import QLabel, QGraphicsDropShadowEffect
+from inference_chat_module import EnhancedChatWidget
+
 
 class VoiceAssistantDock(QDockWidget):
     def __init__(self, parent=None, ide_instance=None):
@@ -89,17 +91,17 @@ class VoiceAssistantDock(QDockWidget):
         """)
 
         # Configura l'area di testo della chat
-        self.chat_text = NeumorphicTextEdit()
-        self.chat_text.setReadOnly(True)
-        self.chat_text.setMinimumHeight(100)
-        self.chat_text.setStyleSheet("""
-            QTextEdit {
-                background-color: #1E1F2B;
-                border: none;
-                padding: 8px;
-                color: #E0E0E0;
-            }
-        """)
+        self.chat_text = EnhancedChatWidget()
+        #self.chat_text.setReadOnly(True)
+        #self.chat_text.setMinimumHeight(100)
+        # self.chat_text.setStyleSheet("""
+        #     QTextEdit {
+        #         background-color: #1E1F2B;
+        #         border: none;
+        #         padding: 8px;
+        #         color: #E0E0E0;
+        #     }
+        # """)
         splitter.addWidget(self.chat_text)
 
         # textbox below transcription area
