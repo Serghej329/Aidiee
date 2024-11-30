@@ -160,7 +160,7 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
 
 
 class CodeBlockDialog(QDialog):
-    def __init__(self, code, language='', parent=None):
+    def __init__(self, code='', language='', parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Code Block ({language.upper() if language else 'Plain Text'})")
         self.resize(600, 400)
@@ -174,7 +174,10 @@ class CodeBlockDialog(QDialog):
         copy_button = QPushButton("Copy Code")
         copy_button.clicked.connect(self.copy_code)
         layout.addWidget(copy_button)
-
+        
+    def update_code(self, code):
+        self.text_edit.setPlainText(code)
+        
     def copy_code(self):
         clipboard = QApplication.clipboard()
         clipboard.setText(self.text_edit.toPlainText())
@@ -197,7 +200,7 @@ class CustomMarkdownConverter:
                 if self.in_code_block:
                     # End of code block
                     self.code_blocks.append((self.code_block_language, self.code_block_content))
-                    html_lines.append(f'<a href="codeblock://{len(self.code_blocks)-1}" class="code-block-placeholder">📄 Code Block ({self.code_block_language.upper() if self.code_block_language else "Plain Text"}) - Click to View</a>')
+                    #html_lines.append(f'<a href="codeblock://{len(self.code_blocks)-1}" class="code-block-placeholder">📄 Code Block ({self.code_block_language.upper() if self.code_block_language else "Plain Text"}) - Click to View</a>')
                     self.in_code_block = False
                     self.code_block_language = ''
                     self.code_block_content = ''
@@ -330,6 +333,11 @@ class MessageContainerWidget(QWidget):
         self.current_stream_message = None
         self.stream_buffer = ""
         self.code_converter = CustomMarkdownConverter()
+        self.current_code_dialog = None
+        self.current_code_buffer = ""
+        self.is_first_code_block_token = True
+        self.in_code_block = False
+        self.code_blocks_index = 0
         self.apply_styles()
     def apply_styles(self):
         self.setStyleSheet("""
@@ -341,7 +349,7 @@ class MessageContainerWidget(QWidget):
             }
             
             QTextEdit a {
-                color: #0084ff;
+                color: red;
                 text-decoration: none;
             }
             
@@ -466,47 +474,286 @@ class MessageContainerWidget(QWidget):
             QTimer.singleShot(100 * i, lambda x=i: self.update_stream(token=message[x], ended=(x == len(message) - 1)))
 
     def begin_streaming(self):
+        """Initialize a new streaming message"""
         self.toggle_writing_indicator(False)
-        self.current_stream_message = MessageWidget("", False)
-        self.layout.addWidget(self.current_stream_message)
+        if self.current_stream_message is None:
+                self.current_stream_message = MessageWidget("", False)
+                self.layout.addWidget(self.current_stream_message)
         self.stream_buffer = ""
+        self.in_code_block = False
+        self.current_code_buffer = ""
+        self.current_code_dialog = None
+        self.scroll_to_bottom()
     
 
+#     def update_stream(self, token: str, ended: bool = False):
+#         """Update the streaming message with new content"""
+#         try:
+#                 # Ensure we have a current message widget
+#                 if self.current_stream_message is None:
+#                         self.begin_streaming()
+#                 if not ended:
+#                         if self.in_code_block:
+#                                 self.current_code_buffer += token
+#                                 # Check if we're ending a code block
+#                                 if "```" in self.current_code_buffer:
+#                                         # Split at the end marker
+#                                         parts = self.current_code_buffer.rsplit("```", 1)
+#                                         if len(parts) == 2:
+#                                                 # Finalize code block content
+#                                                 code_content, remaining_text = parts
+#                                                 if self.current_code_dialog:
+#                                                         self.current_code_dialog.update_code(code_content)
+#                                                         # Get the language from the dialog title
+#                                                         language = self.current_code_dialog.windowTitle().split('(')[1].split(')')[0].lower()
+#                                                         # Add to code blocks before updating the HTML
+#                                                         block_index = len(self.code_converter.code_blocks)
+#                                                         self.code_converter.code_blocks.append((language, code_content))
+                                                        
+#                                                         # Get current HTML content
+#                                                         full_html = self.current_stream_message.text.toHtml()
+#                                                         # Clean up HTML tags
+#                                                         clean_html = full_html.replace('<html><head></head><body>', '').replace('</body></html>', '').strip()
+                                                        
+#                                                         # Add code block placeholder
+#                                                         placeholder = f'<a href="codeblock://{block_index}" class="code-block-placeholder">📄 Code Block ({language.upper() if language else "Plain Text"}) - Click to View</a>'
+                                                        
+#                                                         # Combine content with placeholder
+#                                                         new_html = clean_html + "<br>" + placeholder
+                                                
+#                                                         # If there's remaining text after the code block
+#                                                         if remaining_text.strip():
+#                                                                 additional_html = markdown.markdown(remaining_text.strip(), extensions=['extra', 'nl2br'])
+#                                                                 new_html += "<br>" + additional_html
+#                                                                 self.stream_buffer = remaining_text.strip()
+#                                                         else:
+#                                                                 self.stream_buffer = ""
+                                        
+#                                                         # Update the message content
+#                                                         self.current_stream_message.text.setHtml(new_html)
+#                                                         self.current_stream_message.updateSize()
+                                        
+#                                         self.in_code_block = False
+#                                         self.current_code_buffer = ""
+#                                         self.current_code_dialog = None
+                                        
+#                                 elif self.current_code_dialog:
+#                                         self.current_code_dialog.update_code(self.current_code_buffer)
+#                                 return
+
+#                         self.stream_buffer += token
+
+#                         # Check if we're starting a code block
+#                         if '```' in self.stream_buffer and not self.in_code_block:
+#                                 # Split content at the code block marker
+#                                 parts = self.stream_buffer.split('```', 1)
+
+#                                 # Process text before code block
+#                                 if parts[0].strip():
+#                                         current_html = self.current_stream_message.text.toHtml()
+#                                         clean_html = current_html.replace('<html><head></head><body>', '').replace('</body></html>', '').strip()
+#                                         new_html = markdown.markdown(parts[0].strip(), extensions=['extra', 'nl2br'])
+#                                         self.current_stream_message.text.setHtml(
+#                                                 (clean_html + "<br>" + new_html) if clean_html else new_html
+#                                         )
+#                                         self.current_stream_message.updateSize()
+
+#                                 # Start new code block
+#                                 self.in_code_block = True
+#                                 rest = parts[1]
+#                                 language = rest.split('\n', 1)[0].strip() if '\n' in rest else rest.strip()
+#                                 self.current_code_buffer = rest[len(language):] if language else rest
+
+#                                 # Create and show code block dialog
+#                                 self.current_code_dialog = CodeBlockDialog(language=language, parent=self)
+#                                 self.current_code_dialog.show()
+                                
+#                                 # Get current HTML before adding placeholder
+#                                 current_html = self.current_stream_message.text.toHtml()
+#                                 clean_html = current_html.replace('<html><head></head><body>', '').replace('</body></html>', '').strip()
+                                
+#                                 self.stream_buffer = ""  # Reset buffer for after code block
+#                                 return
+
+#                         # Regular text content
+#                         if self.stream_buffer:
+#                                 html_content = markdown.markdown(
+#                                 self.stream_buffer,
+#                                 extensions=['extra', 'nl2br']
+#                                 )
+
+#                                 # Update the message content
+#                                 if self.current_stream_message and self.current_stream_message.text:
+#                                         self.current_stream_message.text.setHtml(html_content)
+#                                         self.current_stream_message.updateSize()
+#                                         self.scroll_to_bottom()
+#                 else:  # Stream ended
+#                         if self.in_code_block:
+#                                 # Finalize code block
+#                                 if self.current_code_dialog:
+#                                         final_code = self.current_code_buffer.rstrip('`').strip()
+#                                         self.current_code_dialog.update_code(final_code)
+                                        
+#                                         # Get language and add to code blocks
+#                                         language = self.current_code_dialog.windowTitle().split('(')[1].split(')')[0].lower()
+#                                         block_index = len(self.code_converter.code_blocks)
+#                                         self.code_converter.code_blocks.append((language, final_code))
+                                        
+#                                         # Get current HTML and add placeholder
+#                                         current_html = self.current_stream_message.text.toHtml()
+#                                         clean_html = current_html.replace('<html><head></head><body>', '').replace('</body></html>', '').strip()
+#                                         placeholder = f'<a href="codeblock://{block_index}" class="code-block-placeholder">📄 Code Block ({language.upper() if language else "Plain Text"}) - Click to View</a>'
+#                                         new_html = clean_html + "<br>" + placeholder
+                                        
+#                                         self.current_stream_message.text.setHtml(new_html)
+#                                         self.current_stream_message.updateSize()
+                                
+#                                 self.in_code_block = False
+#                                 self.current_code_buffer = ""
+#                                 self.current_code_dialog = None
+
+#                         # Handle any remaining content in stream buffer
+#                         if self.stream_buffer.strip():
+#                                 current_html = self.current_stream_message.text.toHtml()
+#                                 clean_html = current_html.replace('<html><head></head><body>', '').replace('</body></html>', '').strip()
+#                                 final_content = markdown.markdown(
+#                                 self.stream_buffer.strip(),
+#                                 extensions=['extra', 'nl2br']
+#                                 )
+#                                 new_html = (clean_html + "<br>" + final_content) if clean_html else final_content
+#                                 self.current_stream_message.text.setHtml(new_html)
+#                                 self.current_stream_message.updateSize()
+
+#                         self.current_stream_message = None
+#                         self.stream_buffer = ""
+#                         self.toggle_writing_indicator(False)
+#                         self.scroll_to_bottom()
+
+#         except Exception as e:
+#                 print(f"Error in update_stream: {str(e)}")
+#                 import traceback
+#                 traceback.print_exc()
+
+
+
+
+
+
     def update_stream(self, token: str, ended: bool = False):
-        if not ended:
-            self.stream_buffer += token
-            lines = self.stream_buffer.split('\n')
-            for line in lines:
-                if line.startswith('```'):
-                    if self.code_converter.in_code_block:
-                        # End of code block
-                        self.code_converter.code_blocks.append((self.code_converter.code_block_language, self.code_converter.code_block_content))
-                        placeholder = f'<a href="codeblock://{len(self.code_converter.code_blocks)-1}" class="code-block-placeholder">📄 Code Block ({self.code_converter.code_block_language.upper() if self.code_converter.code_block_language else "Plain Text"}) - Click to View</a>'
-                        self.current_stream_message.text.setHtml(placeholder)
-                        self.code_converter.in_code_block = False
-                        self.code_converter.code_block_language = ''
-                        self.code_converter.code_block_content = ''
-                    else:
-                        # Start of code block
-                        parts = line.split(' ', 1)
-                        self.code_converter.code_block_language = parts[0].strip('`') if len(parts) > 1 else ''
-                        self.code_converter.in_code_block = True
-                elif self.code_converter.in_code_block:
-                    # Collect code content
-                    self.code_converter.code_block_content += line + '\n'
-                else:
-                    # Render regular markdown line
-                    html_line = markdown.markdown(line, extras={'link-patterns': None})
-                    self.current_stream_message.text.setHtml(html_line)
-        else:
-            if self.current_stream_message:
-                _, code_blocks = self.code_converter.convert(self.stream_buffer)
-                # Render final message with placeholders
-                self.current_stream_message.text.code_blocks = code_blocks
-                self.current_stream_message.text.set_markdown_text(self.stream_buffer)
-            self.current_stream_message = None
-            self.stream_buffer = ""
-            self.toggle_writing_indicator(False)
+        """Update the streaming message with new content"""
+        try:
+                # Ensure we have a current message widget
+                if self.current_stream_message is None:
+                        self.begin_streaming()
+                
+                if not ended:
+                        if self.in_code_block:      
+                                self.current_code_buffer += token
+                                #Check if we're ending a code block
+                                if "```" in self.current_code_buffer:
+                                        # Split at the end marker
+                                        parts = self.current_code_buffer.rsplit("```", 1)
+                                        if len(parts) == 2:
+                                                # Finalize code block content
+                                                code_content, remaining_text = parts
+                                                if self.current_code_dialog:
+                                                        self.current_code_dialog.update_code(code_content)
+                                                        # Get the language from the dialog title
+                                                        language = self.current_code_buffer.rsplit(" ", 1)[0]
+                                                        # Add to code blocks before updating the HTML
+                                                        #block_index = len(self.code_converter.code_blocks)
+                                                        self.code_converter.code_blocks.append((language, code_content))
+                                                        
+                                                        # Get current HTML content and preserve it
+                                                        self.current_stream_message.updateSize()
+                                                        
+                                                        # Add remaining text to buffer if any
+                                                        if remaining_text.strip():
+                                                                self.stream_buffer += remaining_text.strip()
+
+                                                        # Reset token flag
+                                                        self.is_first_code_block_token = True
+
+                                                self.in_code_block = False
+                                                self.current_code_buffer = ""
+                                                self.current_code_dialog = None
+                                elif self.current_code_dialog:
+                                        if self.is_first_code_block_token:# If its the first token of the codeblock (need errorproof for missing language)
+                                                self.is_first_code_block_token = False
+                                                # Preserve existing content and add code block placeholder
+                                                current_content = self.stream_buffer.replace("```", "")
+                                                placeholder = f'<a href="codeblock://{len(self.code_converter.code_blocks)}" class="code-block-placeholder" ><span style="display: inline-block; box-sizing: border-box;padding:10px;background-color:red">📄 Code Block ({self.current_code_buffer.upper()}) - Click to View</span></a><br>'
+                                                self.stream_buffer = current_content + placeholder
+                                                # Convert the entire buffer to HTML and update
+                                                html_content = markdown.markdown(self.stream_buffer, extensions=['extra', 'nl2br'])
+                                                self.current_stream_message.text.setHtml(html_content)
+                                                # Update Message Size
+                                                self.current_stream_message.updateSize()
+                                                self.current_code_buffer = ""
+                                        else:
+                                                self.current_code_dialog.update_code(self.current_code_buffer)
+                                return
+
+                        self.stream_buffer += token
+
+                        # Check if we're starting a code block
+                        if '```' in self.stream_buffer and not self.in_code_block:
+                                # Split content at the code block marker
+                                parts = self.stream_buffer.rsplit('```', 1)
+
+                                # Process text before code block while preserving existing content
+                                if parts[0].strip():
+                                        # current_html = self.current_stream_message.text.toHtml()
+                                        new_html = markdown.markdown(parts[0].strip(), extensions=['extra', 'nl2br'])
+                                        self.current_stream_message.text.setHtml(new_html)
+                                        self.current_stream_message.updateSize()
+                                
+                                # Start new code block
+                                self.in_code_block = True
+                                rest = parts[1]
+                                language = rest.split('\n', 1)[0].strip() if '\n' in rest else rest.strip()
+
+                                # Create and show code block dialog
+                                self.current_code_dialog = CodeBlockDialog(language=language, parent=self)
+                                self.current_code_dialog.show()
+                                return
+
+                        # Regular text content - update the complete buffer each time
+                        if self.stream_buffer:
+                                # Convert the entire accumulated buffer to HTML
+                                html_content = markdown.markdown(self.stream_buffer, extensions=['extra', 'nl2br'])
+                                
+                                if self.current_stream_message and self.current_stream_message.text:
+                                        self.current_stream_message.text.setHtml(html_content)
+                                        self.current_stream_message.updateSize()
+                                        self.scroll_to_bottom()
+                        
+                else:  # Stream ended
+                        if self.in_code_block:
+                                # Finalize code block while preserving existing content
+                                if self.current_code_dialog:
+                                        final_code = self.current_code_buffer.rstrip('`').strip()
+                                        self.current_code_dialog.update_code(final_code)
+                                        
+                                        # Get language and add to code blocks
+                                        language = self.current_code_dialog.windowTitle().split('(')[1].split(')')[0].lower()
+                                        #block_index = len(self.code_converter.code_blocks)
+                                        self.code_converter.code_blocks.append((language, final_code))
+                                        self.current_stream_message.updateSize()
+                
+                                self.in_code_block = False
+                                self.current_code_buffer = ""
+                                self.current_code_dialog = None
+                        #print(f"the stream buffer was :{self.stream_buffer}")
+                        self.current_stream_message = None
+                        self.stream_buffer = ""
+                        self.toggle_writing_indicator(False)
+                        self.scroll_to_bottom()
+
+        except Exception as e:
+                print(f"Error in update_stream: {str(e)}")
+                import traceback
+                traceback.print_exc()
 
     def scroll_to_bottom(self):
         scrollbar = self.layout.parentWidget().parentWidget().parentWidget().verticalScrollBar()

@@ -126,7 +126,7 @@ class SimpleIDE(FramelessMainWindow):
 
         self.tabs = tabs_dictionary()
 
-    def change_style(self, style_name="monokai"):
+    def change_style(self, style_name="Tokyo Night"):
         self.current_style = style_name
         for index in range(self.tab_widget.count()):
             editor_widget = self.tab_widget.widget(index)
@@ -188,8 +188,8 @@ class SimpleIDE(FramelessMainWindow):
             editor_widget = CodeEditorWidget()
             with open(file_path, "r", encoding="utf8") as f:
                 file_content = f.read()
-            editor_widget.code_editor.setPlainText(file_content)
             file_name = os.path.basename(file_path)
+            editor_widget.set_content(file_content,file_name)
             if not self.tabs.tab_exists(file_name):
                 self.tab_widget.addTab(editor_widget, file_name)
                 self.tabs.add_tab(file_name, path=file_path, index=self.tab_widget.count())

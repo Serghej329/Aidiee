@@ -32,7 +32,7 @@ class LineNumbers(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.fillRect(event.rect(), self.code_widget.background_color)  # Background color
+        painter.fillRect(event.rect(), QColor(self.code_widget.background_color))  # Background color
         block = self.code_editor.firstVisibleBlock()
         block_number = block.blockNumber()
         block_geometry = self.code_editor.blockBoundingGeometry(block).translated(self.code_editor.contentOffset())
