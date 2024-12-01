@@ -105,20 +105,20 @@ class VoiceAssistantDock(QDockWidget):
         splitter.addWidget(self.chat_text)
 
         # textbox below transcription area
-        self.textbox = QPlainTextEdit(self)
-        self.textbox.setPlaceholderText("Digita il tuo comando...")
-        self.textbox.setStyleSheet("""
-            QPlainTextEdit {
-                background-color: #1E1F2B;
-                color: #E0E0E0;
-                padding: 8px;
-            }
-        """)
-        self.textbox.setMinimumHeight(50)
-        splitter.addWidget(self.textbox)
+        # self.textbox = QPlainTextEdit(self)
+        # self.textbox.setPlaceholderText("Digita il tuo comando...")
+        # self.textbox.setStyleSheet("""
+        #     QPlainTextEdit {
+        #         background-color: #1E1F2B;
+        #         color: #E0E0E0;
+        #         padding: 8px;
+        #     }
+        # """)
+        # self.textbox.setMinimumHeight(50)
+        # splitter.addWidget(self.textbox)
 
         # Imposta le dimensioni iniziali per il splitter
-        splitter.setSizes([200, 50])
+        # splitter.setSizes([200, 50])
 
         content_layout.addWidget(splitter)
 
@@ -241,12 +241,12 @@ class VoiceAssistantDock(QDockWidget):
 
     def on_transcription_ready(self, transcription):
         """Handle transcription ready"""
-        current_text = self.textbox.toPlainText()
+        current_text = self.chat_text.input_field.text()
         if current_text:
             new_text = f"{current_text}\n{transcription}"
         else:
             new_text = transcription
-        self.textbox.setPlainText(new_text)
+        self.chat_text.input_field.setText(new_text)
         self.status_label.setText("Assistant active - Waiting for 'Alexa'...")
 
     def toggle_visibility(self):
