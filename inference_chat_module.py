@@ -257,7 +257,7 @@ class ModelManager(QDialog):
             models = ollama.list()['models']
             self.model_combo.clear()
             for model in models:
-                self.model_combo.addItem(model['name'])
+                self.model_combo.addItem(model['model'])
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to fetch models: {e}")
     
@@ -409,7 +409,6 @@ class SendButton(ThemedIconButton):
     def __init__(self, parent=None):
         super().__init__(IconProvider.get_send_icon(), parent=parent)
 
-# ... (previous code remains the same up to the class definitions)
 
 class EnhancedChatWidget(QWidget):
     def __init__(self):
