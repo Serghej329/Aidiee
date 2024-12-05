@@ -29,25 +29,25 @@ class PygmentsHighlighter(QSyntaxHighlighter):
             'Name': 'attribute'
         }
         
-    def highlightBlock(self, text):
-        for token, value in self.lexer.get_tokens(text):
-            token_type = str(token)
+#     def highlightBlock(self, text):
+#         for token, value in self.lexer.get_tokens(text):
+#             token_type = str(token)
             
-            # Find the most specific color mapping
-            color_key = None
-            for token_name, theme_key in self.token_color_map.items():
-                if token_type.startswith(token_name):
-                    color_key = theme_key
-                    break
+#             # Find the most specific color mapping
+#             color_key = None
+#             for token_name, theme_key in self.token_color_map.items():
+#                 if token_type.startswith(token_name):
+#                     color_key = theme_key
+#                     break
             
-            if color_key and color_key in self.theme_colors:
-                format = QTextCharFormat()
-                format.setForeground(QColor(self.theme_colors[color_key]))
-                self.setFormat(
-                    len(text) - len(self.currentBlock().text()) + value.start(),
-                    len(value),
-                    format
-                )
+#             if color_key and color_key in self.theme_colors:
+#                 format = QTextCharFormat()
+#                 format.setForeground(QColor(self.theme_colors[color_key]))
+#                 self.setFormat(
+#                     len(text) - len(self.currentBlock().text()) + value.start(),
+#                     len(value),
+#                     format
+#                 )
 
 class CodeEditorWidget(QWidget):
     def __init__(self, parent=None):
@@ -106,13 +106,15 @@ class CodeEditorWidget(QWidget):
         
         if language == 'python':
             # Use Tree-sitter based highlighter for Python
+            print("using tree sitter")
             self.current_highlighter = SyntaxFormatter(
-                self.code_editor,
+                self.code_editor.document(),
                 self.current_theme
             )
         elif language:
             # Use Pygments based highlighter for other languages
             try:
+                print("using pygments")
                 lexer = get_lexer_for_filename(filename)
                 self.current_highlighter = PygmentsHighlighter(
                     self.code_editor.document(),
@@ -163,11 +165,11 @@ class CodeEditorWidget(QWidget):
         if self.current_highlighter:
             if isinstance(self.current_highlighter, SyntaxFormatter):
                 self.current_highlighter.colors = self.current_theme
-                self.current_highlighter.format_code()
+                #self.current_highlighter.highlightBlock()
             else:
                 # Recreate Pygments highlighter with new theme
                 self.current_highlighter.theme_colors = self.current_theme
-                self.current_highlighter.rehighlight()
+                #self.current_highlighter.rehighlight()
 
     def set_content(self, content, filename=None):
         """Set editor content and apply appropriate highlighting"""
