@@ -102,7 +102,8 @@ class SimpleIDE(FramelessMainWindow):
         self.terminal = Terminal(
             parent=self,
             initial_height=200,
-            theme='Monokai'
+            theme='Monokai',
+            initial_cwd = self.project_path
         )
         # Add the terminal to the vertical splitter
         self.v_splitter.addWidget(self.terminal)

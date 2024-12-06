@@ -29,7 +29,8 @@ class TerminalHandler:
         self.current_cwd = initial_cwd or os.getcwd()
         self.filtered_messages = [
             "Microsoft Windows [Version",
-            "(c) Microsoft Corporation. All rights reserved."
+            "(c) Microsoft Corporation. All rights reserved.",
+            "(c) Microsoft Corporation. Tutti i diritti sono riservati."
         ]
 
     def _start_terminal(self):

@@ -26,24 +26,26 @@ class CustomTitleBar(StandardTitleBar):
         # Create and setup menubar
         self.menuBar = QMenuBar(self.ide_instance.titleBar)
         
-        file_menu = self.menuBar.addMenu("File")
-        new_file_action = file_menu.addAction("New File")
-        open_project = file_menu.addAction("Open Project")
+        # File Menu
+        file_menu = self.menuBar.addMenu(QIcon("./icons/file-menu.svg"), "")
+        new_file_action = file_menu.addAction(QIcon("./icons/new-file.svg"), "New File")
+        open_project = file_menu.addAction(QIcon("./icons/open-project.svg"), "Open Project")
         open_project.triggered.connect(lambda: self.ide_instance.project_manager.open_project(self))
-
-        file_menu.addAction("Save")
+        file_menu.addAction(QIcon("./icons/save.svg"), "Save")
         file_menu.addSeparator()
         file_menu.addAction("Exit")
 
-        edit_menu = self.menuBar.addMenu("Edit")
-        edit_menu.addAction("Undo")
-        edit_menu.addAction("Redo")
+        # Edit Menu
+        edit_menu = self.menuBar.addMenu(QIcon("./icons/edit-menu.svg"), "")
+        edit_menu.addAction(QIcon("./icons/undo.svg"), "Undo")
+        edit_menu.addAction(QIcon("./icons/redo.svg"), "Redo")
         edit_menu.addSeparator()
-        edit_menu.addAction("Cut")
-        edit_menu.addAction("Copy")
-        edit_menu.addAction("Paste")
+        edit_menu.addAction(QIcon("./icons/cut.svg"), "Cut")
+        edit_menu.addAction(QIcon("./icons/copy.svg"), "Copy")
+        edit_menu.addAction(QIcon("./icons/paste.svg"), "Paste")
 
-        view_menu = self.menuBar.addMenu("View")
+        # View Menu
+        view_menu = self.menuBar.addMenu(QIcon("./icons/view-menu.svg"), "")
         editor_template_menu = view_menu.addMenu("Editor Template")
 
         styles = ["monokai", "default", "friendly", "fruity", "manni", "paraiso-dark", "solarized-dark"]
@@ -56,29 +58,35 @@ class CustomTitleBar(StandardTitleBar):
         dock_widget_action.triggered.connect(lambda: self.ide_instance.voice_assistant_dock.toggle_visibility())
         view_menu.addAction(dock_widget_action)
 
-        section_menu = self.menuBar.addMenu("Section")
+        # Section Menu
+        section_menu = self.menuBar.addMenu(QIcon("./icons/section-menu.svg"), "")
         section_menu.addAction("Add Section")
         section_menu.addAction("Remove Section")
 
-        go_menu = self.menuBar.addMenu("Go")
+        # Go Menu
+        go_menu = self.menuBar.addMenu(QIcon("./icons/go-menu.svg"), "")
         go_menu.addAction("Go to Line")
         go_menu.addAction("Go to Definition")
 
-        run_menu = self.menuBar.addMenu("Run")
-        run_menu.addAction("Run Code")
-        run_menu.addAction("Debug Code")
+        # Run Menu
+        run_menu = self.menuBar.addMenu(QIcon("./icons/run-menu.svg"), "")
+        run_menu.addAction(QIcon("./icons/run-menu.svg"), "Run Code")
+        run_menu.addAction(QIcon("./icons/run-menu.svg"), "Debug Code")
 
-        terminal_menu = self.menuBar.addMenu("Terminal")
+        # Terminal Menu
+        terminal_menu = self.menuBar.addMenu(QIcon("./icons/terminal-menu.svg"), "")
         terminal_menu.addAction("New Terminal")
         terminal_menu.addAction("Close Terminal")
 
-        assistant_menu = self.menuBar.addMenu("Aidee Assistant")
-        assistant_start = assistant_menu.addAction("Start")
-        assistant_stop = assistant_menu.addAction("Stop")
+        # Assistant Menu
+        assistant_menu = self.menuBar.addMenu(QIcon("./icons/assistant-menu.svg"), "")
+        assistant_start = assistant_menu.addAction("./icons/Start.svg")
+        assistant_stop = assistant_menu.addAction("./icons/Stop.svg")
         assistant_start.triggered.connect(self.ide_instance.start_detector)
         assistant_stop.triggered.connect(self.ide_instance.stop_detector)
 
-        help_menu = self.menuBar.addMenu("Help")
+        # Help Menu
+        help_menu = self.menuBar.addMenu(QIcon("./icons/help-menu.svg"), "")
         help_menu.addAction("Documentation")
         help_menu.addAction("About")
         
@@ -92,6 +100,7 @@ class CustomTitleBar(StandardTitleBar):
         self.ide_instance.titleBar.minBtn.setPressedColor(Qt.white)
         self.ide_instance.titleBar.maxBtn.setHoverColor(Qt.white)
         self.ide_instance.titleBar.maxBtn.setPressedColor(Qt.white)
+
     def apply_styles(self):
         # Dark theme colors
         self.dark_palette = {
