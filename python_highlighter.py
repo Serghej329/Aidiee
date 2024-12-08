@@ -6,10 +6,10 @@ from PyQt5.QtGui import QTextCharFormat, QColor, QFont, QSyntaxHighlighter
 from PyQt5.QtCore import QTimer
 from typing import Dict, List, Tuple, Optional
 import weakref
+
 class SyntaxThemes:
     def __init__(self):
         # Tokyo Night theme definition
-        #
         self.tokyo_night = {
             'theme_name': 'Tokyo Night',
             'highlight' : '#545c7e',
@@ -49,8 +49,10 @@ class SyntaxThemes:
             'is not': '#bb9af7',
             '-': '#89ddff',
             '+': '#89ddff',
+            '+='
             '|': '#89ddff',
             '*': '#89ddff',
+            'operator':'#89ddff',
             'string': '#9ece6a',
             'string_start': '#9ece6a',
             'string_content': '#9ece6a',
@@ -156,7 +158,10 @@ class SyntaxFormatter(QSyntaxHighlighter):
         # Debounce timer
         self._rehighlight_timer = QTimer()
         self._rehighlight_timer.setSingleShot(True)
-        self._rehighlight_timer.timeout.connect(super().rehighlight)
+        self._rehighlight_timer.timeout.connect(self.rehighlight_now)
+        
+        # Connect to document's contentsChanged signal
+        self.document().contentsChanged.connect(self.on_contents_changed)
         
         self.initialize_attributes()
 
@@ -177,36 +182,6 @@ class SyntaxFormatter(QSyntaxHighlighter):
             'boolean_operator', 'assignment', 'binary_operator'
         }
 
-#     def build_byte_to_char_map(self, text):
-#         """
-#         Creates a mapping from byte positions to character positions.
-#         """
-#         text_hash = hash(text)
-#         if text_hash in self.byte_to_char_cache:
-#             return self.byte_to_char_cache[text_hash]
-        
-#         byte_to_char_map = {}
-#         current_byte = 0
-        
-#         for char_pos, char in enumerate(text):
-#             byte_to_char_map[current_byte] = char_pos
-#             byte_length = len(char.encode('utf-8'))
-            
-#             # Map all bytes of this character to the same character position
-#             for i in range(byte_length):
-#                 byte_to_char_map[current_byte + i] = char_pos
-            
-#             current_byte += byte_length
-
-#         # Create the final position
-#         byte_to_char_map[current_byte] = len(text)
-
-#         # Cache the result
-#         if len(self.byte_to_char_cache) > 100:  # Limit cache size
-#             self.byte_to_char_cache.clear()
-#         self.byte_to_char_cache[text_hash] = byte_to_char_map
-
-#         return byte_to_char_map
     def build_byte_to_char_map(self, text):
         """
         Efficiently builds a byte-to-char position mapping using array operations.
@@ -236,11 +211,11 @@ class SyntaxFormatter(QSyntaxHighlighter):
                 byte_positions.append(current_byte + i)
                 char_positions.append(char_pos)
             current_byte += byte_len
-        
+    
         # Add final position
         byte_positions.append(current_byte)
         char_positions.append(len(text))
-        
+    
         # Create mapping dict in one operation
         mapping = dict(zip(byte_positions, char_positions))
         
@@ -250,13 +225,6 @@ class SyntaxFormatter(QSyntaxHighlighter):
         self.byte_to_char_cache[text_hash] = mapping
         return mapping
         
-
-    def get_char_position(self, byte_pos, text, byte_map):
-        """Fast character position lookup"""
-        if byte_pos in byte_map:
-            return byte_map[byte_pos]
-        # For single-byte characters, byte position equals char position
-        return byte_pos
 
     def get_char_position(self, byte_pos: int, mapping: dict) -> int:
         """
@@ -270,7 +238,7 @@ class SyntaxFormatter(QSyntaxHighlighter):
             Character position
         """
         return mapping.get(byte_pos, byte_pos)  # Fallback to byte_pos for single-byte chars
-    
+
     def adjust_node_range(self,node, byte_to_char_map):
         """
         Converts a node's byte range to character range.
@@ -316,26 +284,6 @@ class SyntaxFormatter(QSyntaxHighlighter):
         end_char = self.get_char_position(node.end_byte, byte_map)
         return text[start_char:end_char]
     
-    def apply_formats(self, formats, block_length):
-        # Group and apply formats efficiently
-        last_fmt = None
-        start = -1
-        for rel_start, rel_length, fmt in sorted(formats, key=lambda x: x[0]):
-                if fmt == last_fmt and start != -1:
-                        # Extend the current range
-                        length += rel_length
-                else:
-                        # Apply the previous format
-                        if start != -1:
-                                self.setFormat(start, length, last_fmt)
-                        # Start a new range
-                        start, length, last_fmt = rel_start, rel_length, fmt
-
-        # Apply the last format
-        if start != -1:
-                self.setFormat(start, length, last_fmt)
-
-
     def handle_special_cases(self, node, text, formats):
         node_text = self.get_node_text(node, text)
         if node.type == 'identifier' and node_text == 'self':
@@ -348,9 +296,6 @@ class SyntaxFormatter(QSyntaxHighlighter):
             return True
         return False
 
-    def handle_identifier(self, node, parent):
-        node_text = self.get_node_text(node)
-        
     def handle_identifier(self, node, parent, text, formats):
         node_text = self.get_node_text(node, text)
         
@@ -448,7 +393,7 @@ class SyntaxFormatter(QSyntaxHighlighter):
         tree = self.get_or_parse_tree(full_text)
         
         # Build byte-to-char map once for the entire text
-        byte_to_char_map = self.build_byte_to_char_map(full_text)
+        byte_map = self.build_byte_to_char_map(full_text)
         
         # Calculate block positions
         block_pos = block.position()
@@ -459,12 +404,10 @@ class SyntaxFormatter(QSyntaxHighlighter):
         cursor = tree.walk()
         
         # Process nodes using cursor with the byte map
-        self.process_visible_nodes(cursor, block_pos, block_end, full_text, byte_to_char_map)
+        self.process_visible_nodes(cursor, block_pos, block_end, full_text, byte_map)
         
         # Apply batched formats
         self.batch_formatter.apply_formats(self)
-
-
 
     def should_skip_block(self, block, doc) -> bool:
         if hasattr(doc, 'documentLayout'):
@@ -577,7 +520,15 @@ class SyntaxFormatter(QSyntaxHighlighter):
         if self._rehighlight_timer.isActive():
             self._rehighlight_timer.stop()
         self._rehighlight_timer.start(500)  # 500ms debounce
-            
+
+    def on_contents_changed(self):
+        if self._rehighlight_timer.isActive():
+            self._rehighlight_timer.stop()
+        self._rehighlight_timer.start(500)  # 500ms debounce
+    
+    def rehighlight_now(self):
+        super().rehighlight()
+
     def highlight_to_html(self, text):
         """
         Highlights text and returns HTML with proper character position handling
@@ -729,4 +680,3 @@ class SyntaxFormatter(QSyntaxHighlighter):
         # Wrap the result in a pre tag to preserve formatting
         highlighted_text = ''.join(highlighted_html)
         return f'<div style="padding: 10;border-radius:5px;background-color:{self.colors['background']};"><pre style="">{highlighted_text}</pre></div>'#padding: 10; background-color:{self.colors['background']};border-radius:5px;margin: 0
-    

@@ -102,7 +102,8 @@ class SimpleIDE(FramelessMainWindow):
         self.terminal = Terminal(
             parent=self,
             initial_height=200,
-            theme='Monokai'
+            theme='Monokai',
+            initial_cwd=self.project_path
         )
         # Add the terminal to the vertical splitter
         self.v_splitter.addWidget(self.terminal)
@@ -125,6 +126,7 @@ class SimpleIDE(FramelessMainWindow):
         self.detector_thread = None
 
         self.tabs = tabs_dictionary()
+
 
     def change_style(self, style_name="Tokyo Night"):
         self.current_style = style_name
@@ -199,6 +201,24 @@ class SimpleIDE(FramelessMainWindow):
                 self.tab_widget.setCurrentIndex(data["index"] - 1)
 
             self.change_style(self.current_style)
+
+    def add_suggestion_tab(self,editor,suggestion_number):
+        """
+        Add a tab not connected to a file, usually use to display the llm code
+        
+        Args:
+            text: Input code to show in the tab
+            
+        """
+        editor_widget = editor
+        suggestion_name = f"Suggestion {suggestion_number+1}"
+        if not self.tabs.tab_exists(suggestion_name) and editor_widget:
+                self.tab_widget.addTab(editor_widget, suggestion_name)
+                self.tabs.add_tab(suggestion_name, path=f"virtual/suggestion_name", index=self.tab_widget.count())
+                self.tab_widget.setCurrentWidget(editor_widget)
+        else:
+                data = self.tabs.get_tab(suggestion_name)
+                self.tab_widget.setCurrentIndex(data["index"] - 1)
 
     def close_tab(self, index):
         self.tab_widget.removeTab(index)
