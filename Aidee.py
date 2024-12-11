@@ -22,7 +22,7 @@ from voice_assistant_dock import VoiceAssistantDock
 from voice_detection_module import CombinedDetector
 from tabs_dictionary import tabs_dictionary
 from code_editor_widget import CodeEditorWidget
-
+from python_highlighter import SyntaxThemes 
 
 class DetectorThread(QThread):
     keyword_detected = pyqtSignal()
@@ -64,6 +64,15 @@ class SimpleIDE(FramelessMainWindow):
     def __init__(self, project_path):
         super().__init__()
         self.setWindowTitle("Aidee")
+        # Get the absolute path of the current script
+        default_path = os.path.abspath(os.path.dirname(__file__))
+        icon_path = os.path.join(default_path, "icons", "logo_new.ico")
+        if not os.path.exists(icon_path):
+                print("Icon file does not exist:", icon_path)
+        else:
+                print("Icon file found.")
+        # Set the window icon
+        self.setWindowIcon(QIcon(icon_path))
         # Creating modules objects
         self.project_path = project_path
         self.file_explorer = FileExplorerWidget(self, self.project_path)
@@ -102,8 +111,7 @@ class SimpleIDE(FramelessMainWindow):
         self.terminal = Terminal(
             parent=self,
             initial_height=200,
-            theme='Monokai',
-            initial_cwd=self.project_path
+            initial_cwd = self.project_path
         )
         # Add the terminal to the vertical splitter
         self.v_splitter.addWidget(self.terminal)
@@ -230,15 +238,21 @@ class SimpleIDE(FramelessMainWindow):
 
     def apply_styles(self):
         # Apply main window styles
-        self.tab_widget.setStyleSheet("""
-            QTabWidget::pane {
+        syntax_themes = SyntaxThemes()
+        self.syntax_themes = SyntaxThemes()
+        self.current_theme = self.syntax_themes.themes['Tokyo Night']
+        background = self.current_theme['main_background']
+        foreground = self.current_theme['main_foreground']
+        self.setStyleSheet(f"background:{background}")
+        self.tab_widget.setStyleSheet(f"""
+            QTabWidget::pane {{
                 border: none;
-                background-color: #2C2D3A;
+                background-color: {background};
                 border-radius: 10px;
                 padding: 5px;
-            }
-            QTabBar::tab {
-                background-color: #2C2D3A;
+            }}
+            QTabBar::tab {{
+                background-color: {background};
                 color: #E0E0E0;
                 border: none;
                 border-top-left-radius: 10px;
@@ -246,27 +260,28 @@ class SimpleIDE(FramelessMainWindow):
                 padding: 10px;
                 margin-right: 5px;
                 border-bottom: 2px solid #1E1F2B;
-            }
-            QTabBar::tab:selected {
+            }}
+            QTabBar::tab:selected {{
                 background-color: #3D3E4D;
                 color: #E0E0E0;
                 border-bottom: 2px solid #3D3E4D;
-            }
-            QTabBar::tab:hover {
+            }}
+            QTabBar::tab:hover {{
                 background-color: #3D3E4D;
-            }
-            QTabBar::close-button {
+            }}
+            QTabBar::close-button {{
                 image: url(img/close_icon.png);
                 subcontrol-position: right;
                 padding: 1.5px;
-            }
+            }}
         """)
-        self.central_widget.setStyleSheet("""
-            #centralWidget {
-                background-color: #2C2D3A;
+        self.central_widget.setStyleSheet(f"""
+            #centralWidget {{
+                background-color: {background};
                 margin:0;
                 padding:0;
-            }
+            }}
         """)
-        dark_palette = DarkThemeStyles.get_dark_palette()
-        self.setStyleSheet(DarkThemeStyles.get_main_style_sheet(dark_palette))
+        # dark_palette = DarkThemeStyles.get_dark_palette()
+        # self.setStyleSheet(DarkThemeStyles.get_main_style_sheet(dark_palette))
+        self.setStyleSheet(f"background-color:{background};color:{foreground}")

@@ -1,9 +1,9 @@
-import os
+import os,sys
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMenuBar, QWidget, QMenu, QAction, QLabel
 from PyQt5.QtGui import QIcon, QPixmap
 from qframelesswindow import StandardTitleBar
-
+from python_highlighter import SyntaxThemes 
 class CustomTitleBar(StandardTitleBar):
     def __init__(self, parent=None, ide_instance=None):
         super().__init__(parent)
@@ -18,32 +18,36 @@ class CustomTitleBar(StandardTitleBar):
         self.apply_styles()
 
     def create_menus(self):
+        default_path = os.path.dirname(__file__)
+        print(f"THE DEFAULT PATH IS : {default_path}")
         # Logo
         logo_label = QLabel(self)
-        logo_pixmap = QPixmap('./img/logo.svg')
+        logo_pixmap = QPixmap(f"{default_path}/icons/logo_new.ico")
         logo_label.setPixmap(logo_pixmap.scaled(30, 30, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         
         # Create and setup menubar
         self.menuBar = QMenuBar(self.ide_instance.titleBar)
         
-        file_menu = self.menuBar.addMenu("File")
-        new_file_action = file_menu.addAction("New File")
-        open_project = file_menu.addAction("Open Project")
+        # File Menu
+        file_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/file-menu.svg"), "")
+        new_file_action = file_menu.addAction(QIcon(f"{default_path}/icons/new-file.svg"), "New File")
+        open_project = file_menu.addAction(QIcon(f"{default_path}/icons/open-project.svg"), "Open Project")
         open_project.triggered.connect(lambda: self.ide_instance.project_manager.open_project(self))
-
-        file_menu.addAction("Save")
+        file_menu.addAction(QIcon(f"{default_path}/icons/save.svg"), "Save")
         file_menu.addSeparator()
         file_menu.addAction("Exit")
 
-        edit_menu = self.menuBar.addMenu("Edit")
-        edit_menu.addAction("Undo")
-        edit_menu.addAction("Redo")
+        # Edit Menu
+        edit_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/edit-menu.svg"), "")
+        edit_menu.addAction(QIcon(f"{default_path}/icons/undo.svg"), "Undo")
+        edit_menu.addAction(QIcon(f"{default_path}/icons/redo.svg"), "Redo")
         edit_menu.addSeparator()
-        edit_menu.addAction("Cut")
-        edit_menu.addAction("Copy")
-        edit_menu.addAction("Paste")
+        edit_menu.addAction(QIcon(f"{default_path}/icons/cut.svg"), "Cut")
+        edit_menu.addAction(QIcon(f"{default_path}/icons/copy.svg"), "Copy")
+        edit_menu.addAction(QIcon(f"{default_path}/icons/paste.svg"), "Paste")
 
-        view_menu = self.menuBar.addMenu("View")
+        # View Menu
+        view_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/view-menu.svg"), "")
         editor_template_menu = view_menu.addMenu("Editor Template")
 
         styles = ["monokai", "default", "friendly", "fruity", "manni", "paraiso-dark", "solarized-dark"]
@@ -56,29 +60,35 @@ class CustomTitleBar(StandardTitleBar):
         dock_widget_action.triggered.connect(lambda: self.ide_instance.voice_assistant_dock.toggle_visibility())
         view_menu.addAction(dock_widget_action)
 
-        section_menu = self.menuBar.addMenu("Section")
+        # Section Menu
+        section_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/section-menu.svg"), "")
         section_menu.addAction("Add Section")
         section_menu.addAction("Remove Section")
 
-        go_menu = self.menuBar.addMenu("Go")
+        # Go Menu
+        go_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/go-menu.svg"), "")
         go_menu.addAction("Go to Line")
         go_menu.addAction("Go to Definition")
 
-        run_menu = self.menuBar.addMenu("Run")
-        run_menu.addAction("Run Code")
-        run_menu.addAction("Debug Code")
+        # Run Menu
+        run_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/run-menu.svg"), "")
+        run_menu.addAction(QIcon(f"{default_path}/icons/run-menu.svg"), "Run Code")
+        run_menu.addAction(QIcon(f"{default_path}/icons/run-menu.svg"), "Debug Code")
 
-        terminal_menu = self.menuBar.addMenu("Terminal")
+        # Terminal Menu
+        terminal_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/terminal-menu.svg"), "")
         terminal_menu.addAction("New Terminal")
         terminal_menu.addAction("Close Terminal")
 
-        assistant_menu = self.menuBar.addMenu("Aidee Assistant")
-        assistant_start = assistant_menu.addAction("Start")
-        assistant_stop = assistant_menu.addAction("Stop")
+        # Assistant Menu
+        assistant_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/assistant-menu.svg"), "")
+        assistant_start = assistant_menu.addAction(QIcon(f"{default_path}/icons/start.svg"), "Start Voice detector")
+        assistant_stop = assistant_menu.addAction(QIcon(f"{default_path}/icons/stop.svg"), "Stop Voice detector")
         assistant_start.triggered.connect(self.ide_instance.start_detector)
         assistant_stop.triggered.connect(self.ide_instance.stop_detector)
 
-        help_menu = self.menuBar.addMenu("Help")
+        # Help Menu
+        help_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/help-menu.svg"), "")
         help_menu.addAction("Documentation")
         help_menu.addAction("About")
         
@@ -88,32 +98,38 @@ class CustomTitleBar(StandardTitleBar):
         self.ide_instance.titleBar.layout().insertStretch(1, 1)
         self.ide_instance.setMenuWidget(self.ide_instance.titleBar)
 
+
+
+    def apply_styles(self):
+        # Setup Theme
+        self.syntax_themes = SyntaxThemes()
+        self.current_theme = self.syntax_themes.themes['Tokyo Night']
+        background = self.current_theme['main_background']
+        foreground = self.current_theme['main_foreground']
+        selected_background = self.current_theme['description_background']
+        selected_foreground = self.current_theme['description_foreground'] 
+        # Set Windows Button Colors
+        self.ide_instance.titleBar.minBtn.setNormalColor(foreground)
         self.ide_instance.titleBar.minBtn.setHoverColor(Qt.white)
         self.ide_instance.titleBar.minBtn.setPressedColor(Qt.white)
         self.ide_instance.titleBar.maxBtn.setHoverColor(Qt.white)
-        self.ide_instance.titleBar.maxBtn.setPressedColor(Qt.white)
-    def apply_styles(self):
-        # Dark theme colors
-        self.dark_palette = {
-            'background': '#2b2b2b',
-            'foreground': '#ffffff',
-            'accent': '#3d3d3d',
-            'highlight': '#323232',
-            'button_hover': '#404040'
-        }
-        
+        self.ide_instance.titleBar.maxBtn.setNormalColor(foreground)
+        self.ide_instance.titleBar.closeBtn.setNormalColor(foreground)
+        # Set titlebar theme
         self.ide_instance.titleBar.setStyleSheet(f"""
+
             /* Title Bar */
             #titleBar {{
-                background-color: {self.dark_palette['background']};
+                background-color: {background};
             }}
             
             /* Menu Bar */
             QMenuBar {{
-                background-color: {self.dark_palette['background']};
-                color: {self.dark_palette['foreground']};
+                background-color: {background};
+                color: {foreground};
                 padding: 5px 0;
                 font-weight: bold;
+                
             }}
             
             QMenuBar::item {{
@@ -123,14 +139,14 @@ class CustomTitleBar(StandardTitleBar):
             }}
             
             QMenuBar::item:selected {{
-                background-color: {self.dark_palette['highlight']};
+                background-color: {selected_background};
             }}
             
             /* Menu */
             QMenu {{
-                background-color: {self.dark_palette['background']};
-                color: {self.dark_palette['foreground']};
-                border: 1px solid {self.dark_palette['accent']};
+                background-color: {background};
+                color: {foreground};
+                border: 1px solid {foreground};
             }}
             
             QMenu::item {{
@@ -138,12 +154,12 @@ class CustomTitleBar(StandardTitleBar):
             }}
             
             QMenu::item:selected {{
-                background-color: {self.dark_palette['highlight']};
+                background-color: {background};
             }}
             
             /* Title Bar Buttons */
             #minimizeButton, #maximizeButton, #closeButton {{
-                color: {self.dark_palette['foreground']};
+                color: {foreground};
                 background-color: transparent;
                 border: none;
                 width: 40px;
@@ -151,7 +167,7 @@ class CustomTitleBar(StandardTitleBar):
             }}
             
             #minimizeButton:hover, #maximizeButton:hover {{
-                background-color: {self.dark_palette['button_hover']};
+                background-color: {selected_background};
             }}
             
             #closeButton:hover {{

@@ -12,6 +12,12 @@ class SyntaxThemes:
         # Tokyo Night theme definition
         self.tokyo_night = {
             'theme_name': 'Tokyo Night',
+            #UI Theme:
+            'main_background' : '#1a1b26',
+            'main_foreground' : '#c0caf5',
+            'description_background' : '#24283b',
+            'description_foreground' : '#7982a9',
+            #Highlighter Theme:
             'highlight' : '#545c7e',
             'background': '#1f2335',
             'foreground': '#a9b1d6',

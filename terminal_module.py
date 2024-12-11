@@ -2,58 +2,15 @@ import sys,os
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, 
                              QLabel, QFrame, QLineEdit, QScrollArea, QHBoxLayout, 
                              QSizePolicy, QComboBox, QTextEdit)
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QFont, QPalette, QColor, QTextOption, QTextDocument
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot,QUrl
+from PyQt5.QtGui import QFont, QPalette, QColor, QTextOption, QTextDocument,QDesktopServices
 import subprocess
 from terminal_handler import TerminalHandler
 from enum import Enum, auto
 import threading
 from output_types import OutputType
 from copy import deepcopy
-class TerminalThemes:
-    THEMES = {
-        'Dark': {
-            'background_color': '#1E1F2A',
-            'border_color': '#374151',
-            'text_color': '#D1D5DB',
-            'prompt_color': '#34D399',
-            'error_color': '#EF4444',
-            'selection_color': '#4B5563',
-            'cursor_color': '#D1D5DB',
-            'link_color': '#E0F2F1'
-        },
-        'Light': {
-            'background_color': '#F9FAFB',
-            'border_color': '#E5E7EB',
-            'text_color': '#1F2937',
-            'prompt_color': '#059669',
-            'error_color': '#DC2626',
-            'selection_color': '#E5E7EB',
-            'cursor_color': '#1F2937',
-            'link_color': '#311B92'
-        },
-        'Matrix': {
-            'background_color': '#0C0C0C',
-            'border_color': '#1A4B1A',
-            'text_color': '#00FF00',
-            'prompt_color': '#00FF00',
-            'error_color': '#FF0000',
-            'selection_color': '#1A4B1A',
-            'cursor_color': '#00FF00',
-            'link_color': '#E0F2F1'
-        },
-        'Monokai': {
-            'background_color': '#272822',
-            'border_color': '#49483E',
-            'text_color': '#F8F8F2',
-            'prompt_color': '#A6E22E',
-            'error_color': '#F92672',
-            'selection_color': '#49483E',
-            'cursor_color': '#F8F8F2',
-            'link_color': '#E0F2F1'
-        }
-    }
-
+from python_highlighter import SyntaxThemes 
 
 class Terminal(QWidget):
     output_received = pyqtSignal(str, str)
@@ -61,7 +18,7 @@ class Terminal(QWidget):
 
     def __init__(self, parent=None, initial_height=300, collapsed_height=50,
                  font_size=12, padding=5, border_radius=8, initial_history=None,
-                 shell_enabled=True, theme='Dark', initial_cwd=None):
+                 shell_enabled=True, initial_cwd=None):
         super().__init__(parent)
         self.history_lock = threading.Lock()
         self.output_received.connect(self.update_output)
@@ -72,6 +29,10 @@ class Terminal(QWidget):
         self.command_index = -1
         self.current_command = ""
         
+        # Initialize theme
+        self.syntax_themes = SyntaxThemes()
+        self.current_theme = self.syntax_themes.themes['Tokyo Night']
+        
         # Store configuration
         self.config = {
             'expanded_size': initial_height,
@@ -80,15 +41,20 @@ class Terminal(QWidget):
             'padding': padding,
             'border_radius': border_radius,
             'shell_enabled': shell_enabled,
-            'theme': theme
+            'background_color': self.current_theme['main_background'],
+            'border_color': self.current_theme['description_background'],
+            'text_color': self.current_theme['main_foreground'],
+            'prompt_color': self.current_theme['function_definition'],
+            'error_color': self.current_theme['error'],
+            'selection_color': self.current_theme['description_background'],
+            'cursor_color': self.current_theme['main_foreground'],
+            'link_color': self.current_theme['function_definition']
         }
         
         # Initialize current working directory
         self.current_cwd = initial_cwd or os.getcwd()
         self.last_cwd = initial_cwd or os.getcwd()
         
-        # Update theme colors
-        self.config.update(TerminalThemes.THEMES[theme])
         self.terminal_parser = TerminalHandler(initial_cwd=self.current_cwd)
         self.terminal_parser.start()
         
@@ -121,14 +87,14 @@ class Terminal(QWidget):
         
         # Theme selector
         self.theme_selector = QComboBox()
-        self.theme_selector.addItems(TerminalThemes.THEMES.keys())
-        self.theme_selector.setCurrentText(self.config['theme'])
+        self.theme_selector.addItems(self.syntax_themes.themes.keys())
+        self.theme_selector.setCurrentText('Tokyo Night')
         self.theme_selector.currentTextChanged.connect(self.change_theme)
         self.theme_selector.setStyleSheet(f"""
                 QComboBox {{
                 color: {self.config['text_color']};
                 background-color: {self.config['background_color']};
-                border: 1px solid {self.config['border_color']};
+                
                 border-radius: 4px;
                 padding: 2px 8px;
                 }}
@@ -140,7 +106,7 @@ class Terminal(QWidget):
                 border: none;
                 }}
         """)
-        header_layout.addWidget(self.theme_selector)
+        #header_layout.addWidget(self.theme_selector)
         
         # Terminal text
         terminal_text = QLabel("Terminal")
@@ -166,7 +132,7 @@ class Terminal(QWidget):
         input_layout.setContentsMargins(12, 6, 12, 12)
         input_layout.setSpacing(8)
         
-        self.prompt_label = QLabel(f'<a style="color:{self.config['prompt_color']}" href="{self.current_cwd}">{self.current_cwd}</a>>')
+        self.prompt_label = QLabel(f'<a style="color:{self.config['prompt_color']}" href="file://{self.current_cwd}">{self.current_cwd}</a>>')
         self.prompt_label.linkActivated.connect(os.startfile)
         self.prompt_label.setFont(QFont("Consolas", self.config['font_size']))
         input_layout.addWidget(self.prompt_label)
@@ -184,7 +150,7 @@ class Terminal(QWidget):
         self.scroll_area.setWidgetResizable(True)
         
         # Output text edit
-        self.output_text_edit = QTextEdit()
+        self.output_text_edit = QLinksTextEdit()
         self.output_text_edit.setReadOnly(True)
         self.output_text_edit.setFont(QFont("Consolas", self.config['font_size']))
         self.output_text_edit.setWordWrapMode(QTextOption.WrapAnywhere)
@@ -228,7 +194,7 @@ class Terminal(QWidget):
         self.header.setStyleSheet(f"""
             QFrame {{
                 background-color: {self.config['background_color']};
-                border: 1px solid {self.config['border_color']};
+                
                 border-radius: {self.config['border_radius']}px;
                 border-bottom-right-radius: 0px;
                 border-bottom-left-radius: 0px;
@@ -261,7 +227,7 @@ class Terminal(QWidget):
         self.terminal_content.setStyleSheet(f"""
             QFrame {{
                 background-color: {self.config['background_color']};
-                border: 1px solid {self.config['border_color']};
+                
                 border-radius: {self.config['border_radius']}px;
                 border-top-right-radius: 0px;
                 border-top-left-radius: 0px;
@@ -316,8 +282,7 @@ class Terminal(QWidget):
                 background-color: {self.config['background_color']};
                 padding: 4px 13px 4px 13px;
                 border: 0;
-                
-                
+                selection-background-color: {self.config['selection_color']};
             }}
         """)
 
@@ -335,8 +300,15 @@ class Terminal(QWidget):
 
     def change_theme(self, theme_name):
         """Change the terminal theme"""
-        self.config.update(TerminalThemes.THEMES[theme_name])
-        self.config['theme'] = theme_name
+        self.current_theme = self.syntax_themes.themes[theme_name]
+        self.config['background_color'] = self.current_theme['main_background']
+        self.config['border_color'] = self.current_theme['description_background']
+        self.config['text_color'] = self.current_theme['main_foreground']
+        self.config['prompt_color'] = self.current_theme['function_definition']
+        self.config['error_color'] = self.current_theme['error']
+        self.config['selection_color'] = self.current_theme['description_background']
+        self.config['cursor_color'] = self.current_theme['main_foreground']
+        self.config['link_color'] = self.current_theme['function_definition']
         self.update_terminal_style()
         self.display_history()
 
@@ -347,7 +319,7 @@ class Terminal(QWidget):
         """Update the current working directory display"""
         self.last_cwd = self.current_cwd
         self.current_cwd = new_cwd
-        self.prompt_label.setText(f'<a style="color:{self.config['prompt_color']}" href="{new_cwd}">{new_cwd}></a>')
+        self.prompt_label.setText(f'<a style="color:{self.config['prompt_color']}" href="file://{new_cwd}">{new_cwd}></a>')
 
     def handle_command(self, command):
         """Process command input in separate thread"""
@@ -369,6 +341,7 @@ class Terminal(QWidget):
                                 if not message and not self.terminal_parser.has_pending_commands():
                                         break
                                 
+
                                 if message:
                                         if message.type == OutputType.CWD:
                                                 self.cwd_changed.emit(message.content)
@@ -381,6 +354,7 @@ class Terminal(QWidget):
                                         else:
                                                 self.output_received.emit("Type not recognized", "error")
                                 
+
                 except Exception as e:
                         self.output_received.emit(str(e), "error")
         
@@ -440,11 +414,11 @@ class Terminal(QWidget):
         for entry in history_copy:
             if isinstance(entry, dict) and "type" in entry:
                 if entry["type"] == "command_group":
-                    if len(history_copy) > 0:
+                    if len(history_copy) > 1:
                         output_content += "<br>"
                     # Use the stored CWD for this command
                     cwd = entry.get("cwd", self.current_cwd)
-                    output_content += f'<span style="color: {self.config["prompt_color"]}"><a style="color:{self.config['prompt_color']}" href="{cwd}">{cwd}</a>> {entry["command"]}</span>'
+                    output_content += f'<span style="color: {self.config["prompt_color"]}"><a style="color:{self.config['prompt_color']}" href="file://{cwd}">{cwd}</a>> {entry["command"]}</span>'
                     
                     for output in entry["outputs"]:
                         if output["type"] == "output":
@@ -456,6 +430,7 @@ class Terminal(QWidget):
                     output_content += f'<div style="margin: 4px 0px; white-space: pre-wrap; ">{entry["content"]}</div>'
                 elif entry["type"] == "error":
                     output_content += f'<span style="color: {self.config["error_color"]}">{entry["content"]}</span>'
+
 
         self.output_text_edit.setHtml(output_content)
         
@@ -516,4 +491,17 @@ class Terminal(QWidget):
         # Set focus to input field when expanded
         if self.is_expanded:
             self.input_field.setFocus()
+class QLinksTextEdit(QTextEdit):
 
+    def mousePressEvent(self, e):
+        self.link = self.anchorAt(e.pos())
+
+    def mouseReleaseEvent(self, e):
+        if self.link:
+            if self.link.startswith("http://") or self.link.startswith("https://"):
+                QDesktopServices.openUrl(QUrl(self.link))
+            elif self.link.startswith("file://"):
+                os.startfile(self.link[7:])
+            else:
+                super().mouseReleaseEvent(e)
+            self.link = None

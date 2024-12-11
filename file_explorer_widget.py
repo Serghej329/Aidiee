@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QInputDialog, QMessageBox, QMenu, QItemDelegate
 )
 from PyQt5.QtCore import Qt, QDir
-
+from python_highlighter import SyntaxThemes 
 from PyQt5.QtGui import QIcon, QCursor
 
 #TODO Implementazione dei progetti con tutti i path dei vari .proj.json files salvati in un projects.json
@@ -31,12 +31,21 @@ class FileExplorerWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+        # Setup Theme
+
+        self.syntax_themes = SyntaxThemes()
+        self.current_theme = self.syntax_themes.themes['Tokyo Night']
+        background = self.current_theme['main_background']
+        foreground = self.current_theme['main_foreground']
+        selected_background = self.current_theme['description_background']
+        selected_foreground = self.current_theme['description_foreground'] 
+
         # Header
         header = QWidget()
         header.setFixedHeight(30)
-        header.setStyleSheet("""
-            background-color: #2C2D3A;
-            color: #E0E0E0;
+        header.setStyleSheet(f"""
+            background-color: {background};
+            color: {foreground};
             padding: 5px;
             font-weight: bold;
         """)
@@ -48,30 +57,30 @@ class FileExplorerWidget(QWidget):
         header_layout.addWidget(explorer_label)
         
         layout.addWidget(header)
-        
         # Tree View
         self.tree_view = QTreeView()
         # tree_item = QItemDelegate()
         # self.tree_view.setItemDelegate(tree_item)
         self.tree_view.setCursor(QCursor(Qt.PointingHandCursor))
         self.tree_view.clicked.connect(self.onExplorerClicked)
-        self.tree_view.setStyleSheet("""
-            QTreeView {
-                background-color: #2C2D3A;
+        self.tree_view.setStyleSheet(f"""
+            QTreeView {{
+                background-color: {background};
                 border: none;
-                color: #E0E0E0;
-            }
-            QTreeView::item {
+                outline: 0;
+                color: {foreground};
+            }}
+            QTreeView::item {{
                 padding: 5px;
                 
-            }
-            QTreeView::item:selected {
-                background-color: #3D3E4D;
-            }
-            QTreeView::item:hover {
-                background-color: #3D3E4D;
-                
-            }
+            }}
+            QTreeView::item:selected {{
+                background-color: {selected_background};
+                color: {selected_foreground};
+            }}
+            QTreeView::item:hover {{
+                background-color: {selected_background};
+            }}
         """)
         
         # File System Model
