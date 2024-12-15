@@ -5,7 +5,7 @@ import json
 import ctypes
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QTabWidget, QFileDialog
+    QWidget, QVBoxLayout, QTabWidget, QFileDialog, QFrame
 )
 from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
@@ -22,7 +22,7 @@ from voice_assistant_dock import VoiceAssistantDock
 from voice_detection_module import CombinedDetector
 from tabs_dictionary import tabs_dictionary
 from code_editor_widget import CodeEditorWidget
-
+from python_highlighter import SyntaxThemes 
 
 class DetectorThread(QThread):
     keyword_detected = pyqtSignal()
@@ -64,6 +64,15 @@ class SimpleIDE(FramelessMainWindow):
     def __init__(self, project_path):
         super().__init__()
         self.setWindowTitle("Aidee")
+        # Get the absolute path of the current script
+        default_path = os.path.abspath(os.path.dirname(__file__))
+        icon_path = os.path.join(default_path, "icons", "logo_new.ico")
+        if not os.path.exists(icon_path):
+                print("Icon file does not exist:", icon_path)
+        else:
+                print("Icon file found.")
+        # Set the window icon
+        self.setWindowIcon(QIcon(icon_path))
         # Creating modules objects
         self.project_path = project_path
         self.file_explorer = FileExplorerWidget(self, self.project_path)
@@ -77,61 +86,79 @@ class SimpleIDE(FramelessMainWindow):
         self.titleBar.raise_()
 
     def setup_ui(self):
+        # Creazione del widget centrale
         self.central_widget = QWidget()
         self.central_widget.setObjectName("centralWidget")
-        # Set central widget
         self.setCentralWidget(self.central_widget)
+
+        # Layout principale
         main_layout = QVBoxLayout(self.central_widget)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        # Setup custom titlebar
+
+        # Setup della barra del titolo personalizzata
         self.custom_titlebar = CustomTitleBar(ide_instance=self)
-        # Create main horizontal splitter
+
+        # Creazione del QSplitter orizzontale principale
         self.h_splitter = CosmicSplitter(Qt.Horizontal)
-        # Add the file explorer to the splitter
+
+        # Aggiunta del file explorer al QSplitter orizzontale
         self.h_splitter.addWidget(self.file_explorer)
-        # Create main vertical splitter
+
+        # Creazione del QSplitter verticale principale
         self.v_splitter = CosmicSplitter(Qt.Vertical)
-        # Setting the tab widget
+
+        # Configurazione del QTabWidget
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.tabCloseRequested.connect(lambda index: self.close_tab(index))
-        # Adding the tab widget to the vertical main splitter
+
+        # Aggiunta del QTabWidget al QSplitter verticale
         self.v_splitter.addWidget(self.tab_widget)
-        # Create the custom terminal widget from terminal_module.py
+
+        # Creazione del terminale personalizzato
         self.terminal = Terminal(
             parent=self,
             initial_height=200,
-            theme='Monokai',
-            initial_cwd = self.project_path
+            initial_cwd=self.project_path
         )
-        # Add the terminal to the vertical splitter
+
+        # Aggiunta del terminale al QSplitter verticale
         self.v_splitter.addWidget(self.terminal)
-        # Set sizes for the vertical splitter
-        self.v_splitter.setSizes([600, 200])
-        # Add the vertical splitter to the horizontal splitter
+
+        # Impostazione delle dimensioni iniziali del QSplitter verticale
+        self.v_splitter.setSizes([800, 200])
+
+        # Aggiunta del QSplitter verticale al QSplitter orizzontale
         self.h_splitter.addWidget(self.v_splitter)
-        # Set sizes for the horizontal splitter
+
+        # Impostazione delle dimensioni iniziali del QSplitter orizzontale
         self.h_splitter.setSizes([250, self.width() - 250])
-        # Adding the horizontal splitter with the vertical splitter inside to the main layout
+
+        # Aggiunta del QSplitter orizzontale al layout principale
         main_layout.addWidget(self.h_splitter)
-        # Set default style for the code editor(monokai)
+
+        # Impostazione dello stile predefinito per l'editor di codice (Tokyo Night)
         self.change_style()
-        # Create the voice assistant dock object and add it to the main window
+
+        # Creazione del dock per l'assistente vocale e aggiunta alla finestra principale
         self.voice_assistant_dock = VoiceAssistantDock(ide_instance=self)
         self.addDockWidget(Qt.RightDockWidgetArea, self.voice_assistant_dock)
 
-        # Initialize detector and thread
+        # Inizializzazione del rilevatore vocale e del thread
         self.detector = CombinedDetector(whisper_model_version="base")
         self.detector_thread = None
 
+        # Inizializzazione del dizionario delle schede
         self.tabs = tabs_dictionary()
+
 
     def change_style(self, style_name="Tokyo Night"):
         self.current_style = style_name
         for index in range(self.tab_widget.count()):
             editor_widget = self.tab_widget.widget(index)
-            editor_widget.set_style(style_name)
+            if isinstance(editor_widget, CodeEditorWidget):
+                editor_widget.set_style(style_name)
 
     def start_detector(self):
         if self.detector_thread and self.detector_thread.isRunning():
@@ -201,6 +228,24 @@ class SimpleIDE(FramelessMainWindow):
 
             self.change_style(self.current_style)
 
+    def add_suggestion_tab(self,editor,suggestion_number):
+        """
+        Add a tab not connected to a file, usually use to display the llm code
+        
+        Args:
+            text: Input code to show in the tab
+            
+        """
+        editor_widget = editor
+        suggestion_name = f"Suggestion {suggestion_number+1}"
+        if not self.tabs.tab_exists(suggestion_name) and editor_widget:
+                self.tab_widget.addTab(editor_widget, suggestion_name)
+                self.tabs.add_tab(suggestion_name, path=f"virtual/suggestion_name", index=self.tab_widget.count())
+                self.tab_widget.setCurrentWidget(editor_widget)
+        else:
+                data = self.tabs.get_tab(suggestion_name)
+                self.tab_widget.setCurrentIndex(data["index"] - 1)
+
     def close_tab(self, index):
         self.tab_widget.removeTab(index)
         self.tabs.remove_tab(self.tabs.get_tab_by_index(index + 1))
@@ -211,15 +256,21 @@ class SimpleIDE(FramelessMainWindow):
 
     def apply_styles(self):
         # Apply main window styles
-        self.tab_widget.setStyleSheet("""
-            QTabWidget::pane {
+        syntax_themes = SyntaxThemes()
+        self.syntax_themes = SyntaxThemes()
+        self.current_theme = self.syntax_themes.themes['Tokyo Night']
+        background = self.current_theme['main_background']
+        foreground = self.current_theme['main_foreground']
+        self.setStyleSheet(f"background:{background}")
+        self.tab_widget.setStyleSheet(f"""
+            QTabWidget::pane {{
                 border: none;
-                background-color: #2C2D3A;
+                background-color: {background};
                 border-radius: 10px;
                 padding: 5px;
-            }
-            QTabBar::tab {
-                background-color: #2C2D3A;
+            }}
+            QTabBar::tab {{
+                background-color: {background};
                 color: #E0E0E0;
                 border: none;
                 border-top-left-radius: 10px;
@@ -227,27 +278,28 @@ class SimpleIDE(FramelessMainWindow):
                 padding: 10px;
                 margin-right: 5px;
                 border-bottom: 2px solid #1E1F2B;
-            }
-            QTabBar::tab:selected {
+            }}
+            QTabBar::tab:selected {{
                 background-color: #3D3E4D;
                 color: #E0E0E0;
                 border-bottom: 2px solid #3D3E4D;
-            }
-            QTabBar::tab:hover {
+            }}
+            QTabBar::tab:hover {{
                 background-color: #3D3E4D;
-            }
-            QTabBar::close-button {
+            }}
+            QTabBar::close-button {{
                 image: url(img/close_icon.png);
                 subcontrol-position: right;
                 padding: 1.5px;
-            }
+            }}
         """)
-        self.central_widget.setStyleSheet("""
-            #centralWidget {
-                background-color: #2C2D3A;
+        self.central_widget.setStyleSheet(f"""
+            #centralWidget {{
+                background-color: {background};
                 margin:0;
                 padding:0;
-            }
+            }}
         """)
-        dark_palette = DarkThemeStyles.get_dark_palette()
-        self.setStyleSheet(DarkThemeStyles.get_main_style_sheet(dark_palette))
+        # dark_palette = DarkThemeStyles.get_dark_palette()
+        # self.setStyleSheet(DarkThemeStyles.get_main_style_sheet(dark_palette))
+        self.setStyleSheet(f"background-color:{background};color:{foreground}")

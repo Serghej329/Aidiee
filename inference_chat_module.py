@@ -411,11 +411,11 @@ class SendButton(ThemedIconButton):
 
 
 class EnhancedChatWidget(QWidget):
-    def __init__(self):
+    def __init__(self,parent):
         super().__init__()
         self.setWindowTitle("Advanced Ollama Chat")
         self.resize(1000, 800)
-        
+        self.parent = parent
         # Initialize model manager and settings
         self.model_settings = {}
         self.current_model_config = None
@@ -443,7 +443,7 @@ class EnhancedChatWidget(QWidget):
         layout.addLayout(model_bar)
         
         # Chat display
-        self.chat_display = ChatWidget()
+        self.chat_display = ChatWidget(aidee=self.parent)
         layout.addWidget(self.chat_display)
         
         # Input area

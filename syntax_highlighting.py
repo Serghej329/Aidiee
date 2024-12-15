@@ -40,6 +40,6 @@ class PythonHighlighter(QSyntaxHighlighter):
         self.lexer = Python3Lexer()
         self.formatter = PygmentsFormatter(self, style_name)
 
-    def highlightBlock(self, text):
-        self.current_block_position = 0
-        highlight(text, self.lexer, self.formatter)
+#     def highlightBlock(self, text):
+#         self.current_block_position = 0
+#         highlight(text, self.lexer, self.formatter)

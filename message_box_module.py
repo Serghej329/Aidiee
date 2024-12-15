@@ -2,10 +2,11 @@ import sys
 import webbrowser
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTextEdit, QLineEdit, QPushButton, 
-                             QLabel, QScrollArea, QFrame,QSizePolicy,QDialog,QPlainTextEdit)
+                             QLabel, QScrollArea, QFrame,QSizePolicy,QPlainTextEdit)
 from PyQt5.QtCore import (Qt, QTimer, pyqtSignal, QSize, QPropertyAnimation, 
                           QPoint, QSequentialAnimationGroup, QParallelAnimationGroup,QUrl)
 from PyQt5.QtGui import QPixmap, QPalette, QColor, QFont, QIcon,QTextCursor,QDesktopServices,QSyntaxHighlighter,QTextCharFormat
+from code_editor_widget import CodeEditorWidget
 import markdown
 import re
 class ShadowDot(QFrame):
@@ -159,34 +160,42 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
                 self.setFormat(start, length, format)
 
 
-class CodeBlockDialog(QDialog):
-    def __init__(self, code='', language='', parent=None):
+class CodeBlockDialog(CodeEditorWidget):
+    def __init__(self, code='', language='',number=0, parent=None,):
         super().__init__(parent)
-        self.setWindowTitle(f"Code Block ({language.upper() if language else 'Plain Text'})")
-        self.resize(600, 400)
-        layout = QVBoxLayout(self)
-        self.text_edit = QPlainTextEdit()
-        self.text_edit.setPlainText(code)
-        self.text_edit.setFont(QFont("Consolas", 10))
-        self.text_edit.setReadOnly(True)
-        self.highlighter = PythonSyntaxHighlighter(self.text_edit.document())
-        layout.addWidget(self.text_edit)
-        copy_button = QPushButton("Copy Code")
-        copy_button.clicked.connect(self.copy_code)
-        layout.addWidget(copy_button)
+        #self.setWindowTitle(f"Code Block ({language.upper() if language else 'Plain Text'})")
+       # self.resize(600, 400)
+        #layout = QVBoxLayout(self)
+        #self.text_edit = QPlainTextEdit()
+        print("setting up codeblock dialog")
+        self.language = language
+        
+        #self.highlighter = PythonSyntaxHighlighter(self.text_edit.document())
+        #layout.addWidget(self.text_edit)
+        #copy_button = QPushButton("Copy Code")
+        #copy_button.clicked.connect(self.copy_code)
+        #layout.addWidget(copy_button)
+        self.code_editor.setPlainText(code)
+        self.code_editor.setReadOnly(True)
+        self.added = False
+        self.number = number
+        self.aidee = parent
         
     def update_code(self, code):
-        self.text_edit.setPlainText(code)
-        
-    def copy_code(self):
-        clipboard = QApplication.clipboard()
-        clipboard.setText(self.text_edit.toPlainText())
+        #self.verticalScrollBar().setValue(self.code_editor.verticalScrollBar().maximum())
+        if not self.added:
+              self.aidee.add_suggestion_tab(editor=self,suggestion_number = self.number)
+        self.set_content(code)
+
+
+     
 
 
 
 
 class CustomMarkdownConverter:
-    def __init__(self):
+    def __init__(self,parent = None,):
+        self.aidee = parent
         self.code_blocks = []
         self.in_code_block = False
         self.code_block_language = ''
@@ -219,14 +228,17 @@ class CustomMarkdownConverter:
         return '\n'.join(html_lines), self.code_blocks
 
 class MarkdownTextEdit(QTextEdit):
-    def __init__(self, parent=None):
+    def __init__(self, parent,converter):
         super().__init__(parent)
+        self.aidee = parent
+        self.code_converter = converter
         self.setReadOnly(True)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setMinimumWidth(20)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.code_blocks = []
+        self.code_dialogs = []
         
     def set_markdown_text(self, markdown_text):
         self.code_blocks = []
@@ -235,7 +247,6 @@ class MarkdownTextEdit(QTextEdit):
         self.setHtml(html_text)
         self.update_size()
 
-        
     def mousePressEvent(self, event):
         cursor = self.cursorForPosition(event.pos())
         char_format = cursor.charFormat()
@@ -244,17 +255,26 @@ class MarkdownTextEdit(QTextEdit):
             if href.startswith("codeblock://"):
                 block_id_str = href[len("codeblock://"):]
                 try:
+                    
                     block_id = int(block_id_str)
-                    if 0 <= block_id < len(self.code_blocks):
-                        language, code = self.code_blocks[block_id]
-                        dialog = CodeBlockDialog(code, language)
-                        dialog.exec_()
+                    if(block_id>=0 and block_id<=len(self.code_converter.code_blocks)):
+                        code,language  = self.code_converter.code_blocks[block_id]
+                        print(f"language is : {language}\ncode is: {code}")
+                        editor_dialog = CodeBlockDialog(code = code ,language=language, number = block_id)
+                        self.aidee.add_suggestion_tab(suggestion_number = block_id,editor = editor_dialog)
+                        editor_dialog.set_language(language=language)
+                        editor_dialog.set_content(content=code)
+                        print(f"Setting to path : virtual/Suggestion {block_id+1}")
                 except (ValueError, IndexError) as e:
                     print(f"Error accessing block ID {block_id_str}: {e}")
+                    print(f"Invalid block_id: {block_id}")
+                    print(f"Code blocks available: {self.code_converter.code_blocks}")
             else:
                 QDesktopServices.openUrl(QUrl(href))
         else:
             super().mousePressEvent(event)
+
+
         
     def update_size(self):
         document = self.document()
@@ -266,8 +286,9 @@ class MarkdownTextEdit(QTextEdit):
         self.setMinimumWidth(int(min_width))
 
 class MessageWidget(QWidget):
-    def __init__(self, message="", is_user=True, parent=None):
+    def __init__(self,parent, converter,message="", is_user=True ):
         super().__init__(parent)
+        self.aidee = parent
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -279,7 +300,7 @@ class MessageWidget(QWidget):
         self.bubble.setLayout(self.bubble_layout)
         
         # Create and configure MarkdownTextEdit
-        self.text = MarkdownTextEdit()
+        self.text = MarkdownTextEdit(parent = self.aidee, converter = converter)
         self.bubble_layout.addWidget(self.text)
         
         # Add bubble to main layout with proper alignment
@@ -326,19 +347,24 @@ class MessageWidget(QWidget):
 class MessageContainerWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.aidee = parent
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(8)
         self.layout.addStretch()
         self.writing_indicator = WritingIndicator()
         self.current_stream_message = None
         self.stream_buffer = ""
-        self.code_converter = CustomMarkdownConverter()
+        self.code_converter = CustomMarkdownConverter(parent=parent)
         self.current_code_dialog = None
         self.current_code_buffer = ""
         self.is_first_code_block_token = True
         self.in_code_block = False
         self.code_blocks_index = 0
         self.apply_styles()
+        # self.simulate_stream_response(message="""'''python
+        #                  for i in test:
+        #                  i +=1print(i)
+        #                  '''""")
     def apply_styles(self):
         self.setStyleSheet("""
             QTextEdit {
@@ -451,7 +477,7 @@ class MessageContainerWidget(QWidget):
             self.layout.removeWidget(self.writing_indicator)
             self.writing_indicator.hide()
             
-        message_widget = MessageWidget(message, is_user)
+        message_widget = MessageWidget(parent=self.aidee, message=message, is_user=is_user, converter = self.code_converter)
         self.layout.addWidget(message_widget)
         
         if not is_user:
@@ -467,177 +493,23 @@ class MessageContainerWidget(QWidget):
 
     def simulate_stream_response(self, message):
         self.toggle_writing_indicator(False)
-        self.current_stream_message = MessageWidget("", False)
+        self.current_stream_message = MessageWidget("", False,parent=self.aidee)
         self.layout.addWidget(self.current_stream_message)
         self.stream_buffer = ""
         for i in range(len(message)):
-            QTimer.singleShot(100 * i, lambda x=i: self.update_stream(token=message[x], ended=(x == len(message) - 1)))
+            QTimer.singleShot(50 * i, lambda x=i: self.update_stream(token=message[x], ended=(x == len(message) - 1)))
 
     def begin_streaming(self):
         """Initialize a new streaming message"""
         self.toggle_writing_indicator(False)
         if self.current_stream_message is None:
-                self.current_stream_message = MessageWidget("", False)
+                self.current_stream_message = MessageWidget(parent=self.aidee,message="", is_user=False,converter = self.code_converter)
                 self.layout.addWidget(self.current_stream_message)
         self.stream_buffer = ""
         self.in_code_block = False
         self.current_code_buffer = ""
         self.current_code_dialog = None
         self.scroll_to_bottom()
-    
-
-#     def update_stream(self, token: str, ended: bool = False):
-#         """Update the streaming message with new content"""
-#         try:
-#                 # Ensure we have a current message widget
-#                 if self.current_stream_message is None:
-#                         self.begin_streaming()
-#                 if not ended:
-#                         if self.in_code_block:
-#                                 self.current_code_buffer += token
-#                                 # Check if we're ending a code block
-#                                 if "```" in self.current_code_buffer:
-#                                         # Split at the end marker
-#                                         parts = self.current_code_buffer.rsplit("```", 1)
-#                                         if len(parts) == 2:
-#                                                 # Finalize code block content
-#                                                 code_content, remaining_text = parts
-#                                                 if self.current_code_dialog:
-#                                                         self.current_code_dialog.update_code(code_content)
-#                                                         # Get the language from the dialog title
-#                                                         language = self.current_code_dialog.windowTitle().split('(')[1].split(')')[0].lower()
-#                                                         # Add to code blocks before updating the HTML
-#                                                         block_index = len(self.code_converter.code_blocks)
-#                                                         self.code_converter.code_blocks.append((language, code_content))
-                                                        
-#                                                         # Get current HTML content
-#                                                         full_html = self.current_stream_message.text.toHtml()
-#                                                         # Clean up HTML tags
-#                                                         clean_html = full_html.replace('<html><head></head><body>', '').replace('</body></html>', '').strip()
-                                                        
-#                                                         # Add code block placeholder
-#                                                         placeholder = f'<a href="codeblock://{block_index}" class="code-block-placeholder">📄 Code Block ({language.upper() if language else "Plain Text"}) - Click to View</a>'
-                                                        
-#                                                         # Combine content with placeholder
-#                                                         new_html = clean_html + "<br>" + placeholder
-                                                
-#                                                         # If there's remaining text after the code block
-#                                                         if remaining_text.strip():
-#                                                                 additional_html = markdown.markdown(remaining_text.strip(), extensions=['extra', 'nl2br'])
-#                                                                 new_html += "<br>" + additional_html
-#                                                                 self.stream_buffer = remaining_text.strip()
-#                                                         else:
-#                                                                 self.stream_buffer = ""
-                                        
-#                                                         # Update the message content
-#                                                         self.current_stream_message.text.setHtml(new_html)
-#                                                         self.current_stream_message.updateSize()
-                                        
-#                                         self.in_code_block = False
-#                                         self.current_code_buffer = ""
-#                                         self.current_code_dialog = None
-                                        
-#                                 elif self.current_code_dialog:
-#                                         self.current_code_dialog.update_code(self.current_code_buffer)
-#                                 return
-
-#                         self.stream_buffer += token
-
-#                         # Check if we're starting a code block
-#                         if '```' in self.stream_buffer and not self.in_code_block:
-#                                 # Split content at the code block marker
-#                                 parts = self.stream_buffer.split('```', 1)
-
-#                                 # Process text before code block
-#                                 if parts[0].strip():
-#                                         current_html = self.current_stream_message.text.toHtml()
-#                                         clean_html = current_html.replace('<html><head></head><body>', '').replace('</body></html>', '').strip()
-#                                         new_html = markdown.markdown(parts[0].strip(), extensions=['extra', 'nl2br'])
-#                                         self.current_stream_message.text.setHtml(
-#                                                 (clean_html + "<br>" + new_html) if clean_html else new_html
-#                                         )
-#                                         self.current_stream_message.updateSize()
-
-#                                 # Start new code block
-#                                 self.in_code_block = True
-#                                 rest = parts[1]
-#                                 language = rest.split('\n', 1)[0].strip() if '\n' in rest else rest.strip()
-#                                 self.current_code_buffer = rest[len(language):] if language else rest
-
-#                                 # Create and show code block dialog
-#                                 self.current_code_dialog = CodeBlockDialog(language=language, parent=self)
-#                                 self.current_code_dialog.show()
-                                
-#                                 # Get current HTML before adding placeholder
-#                                 current_html = self.current_stream_message.text.toHtml()
-#                                 clean_html = current_html.replace('<html><head></head><body>', '').replace('</body></html>', '').strip()
-                                
-#                                 self.stream_buffer = ""  # Reset buffer for after code block
-#                                 return
-
-#                         # Regular text content
-#                         if self.stream_buffer:
-#                                 html_content = markdown.markdown(
-#                                 self.stream_buffer,
-#                                 extensions=['extra', 'nl2br']
-#                                 )
-
-#                                 # Update the message content
-#                                 if self.current_stream_message and self.current_stream_message.text:
-#                                         self.current_stream_message.text.setHtml(html_content)
-#                                         self.current_stream_message.updateSize()
-#                                         self.scroll_to_bottom()
-#                 else:  # Stream ended
-#                         if self.in_code_block:
-#                                 # Finalize code block
-#                                 if self.current_code_dialog:
-#                                         final_code = self.current_code_buffer.rstrip('`').strip()
-#                                         self.current_code_dialog.update_code(final_code)
-                                        
-#                                         # Get language and add to code blocks
-#                                         language = self.current_code_dialog.windowTitle().split('(')[1].split(')')[0].lower()
-#                                         block_index = len(self.code_converter.code_blocks)
-#                                         self.code_converter.code_blocks.append((language, final_code))
-                                        
-#                                         # Get current HTML and add placeholder
-#                                         current_html = self.current_stream_message.text.toHtml()
-#                                         clean_html = current_html.replace('<html><head></head><body>', '').replace('</body></html>', '').strip()
-#                                         placeholder = f'<a href="codeblock://{block_index}" class="code-block-placeholder">📄 Code Block ({language.upper() if language else "Plain Text"}) - Click to View</a>'
-#                                         new_html = clean_html + "<br>" + placeholder
-                                        
-#                                         self.current_stream_message.text.setHtml(new_html)
-#                                         self.current_stream_message.updateSize()
-                                
-#                                 self.in_code_block = False
-#                                 self.current_code_buffer = ""
-#                                 self.current_code_dialog = None
-
-#                         # Handle any remaining content in stream buffer
-#                         if self.stream_buffer.strip():
-#                                 current_html = self.current_stream_message.text.toHtml()
-#                                 clean_html = current_html.replace('<html><head></head><body>', '').replace('</body></html>', '').strip()
-#                                 final_content = markdown.markdown(
-#                                 self.stream_buffer.strip(),
-#                                 extensions=['extra', 'nl2br']
-#                                 )
-#                                 new_html = (clean_html + "<br>" + final_content) if clean_html else final_content
-#                                 self.current_stream_message.text.setHtml(new_html)
-#                                 self.current_stream_message.updateSize()
-
-#                         self.current_stream_message = None
-#                         self.stream_buffer = ""
-#                         self.toggle_writing_indicator(False)
-#                         self.scroll_to_bottom()
-
-#         except Exception as e:
-#                 print(f"Error in update_stream: {str(e)}")
-#                 import traceback
-#                 traceback.print_exc()
-
-
-
-
-
 
     def update_stream(self, token: str, ended: bool = False):
         """Update the streaming message with new content"""
@@ -682,7 +554,7 @@ class MessageContainerWidget(QWidget):
                                                 self.is_first_code_block_token = False
                                                 # Preserve existing content and add code block placeholder
                                                 current_content = self.stream_buffer.replace("```", "")
-                                                placeholder = f'<a href="codeblock://{len(self.code_converter.code_blocks)}" class="code-block-placeholder" ><span style="display: inline-block; box-sizing: border-box;padding:10px;background-color:red">📄 Code Block ({self.current_code_buffer.upper()}) - Click to View</span></a><br>'
+                                                placeholder = f'<br><a href="codeblock://{len(self.code_converter.code_blocks)}" style="padding:10px;font-size:15px;color:#37474F;text-decoration: none;border-radius:8px;background:#D1C4E9" class="code-block-placeholder" style="font-weight:bold;"><span >📄 Code Block ({self.current_code_buffer.upper()}) - Click to View</span></a><br>'
                                                 self.stream_buffer = current_content + placeholder
                                                 # Convert the entire buffer to HTML and update
                                                 html_content = markdown.markdown(self.stream_buffer, extensions=['extra', 'nl2br'])
@@ -712,9 +584,9 @@ class MessageContainerWidget(QWidget):
                                 self.in_code_block = True
                                 rest = parts[1]
                                 language = rest.split('\n', 1)[0].strip() if '\n' in rest else rest.strip()
-
+                                block_index = len(self.code_converter.code_blocks)
                                 # Create and show code block dialog
-                                self.current_code_dialog = CodeBlockDialog(language=language, parent=self)
+                                self.current_code_dialog = CodeBlockDialog(language=language, parent=self.aidee,number = block_index,code = "")
                                 self.current_code_dialog.show()
                                 return
 
@@ -739,6 +611,7 @@ class MessageContainerWidget(QWidget):
                                         language = self.current_code_dialog.windowTitle().split('(')[1].split(')')[0].lower()
                                         #block_index = len(self.code_converter.code_blocks)
                                         self.code_converter.code_blocks.append((language, final_code))
+                                        self.code_converter.code_dialogs.append((self.current_code_dialog,len(self.code_converter.code_blocks)))
                                         self.current_stream_message.updateSize()
                 
                                 self.in_code_block = False
@@ -760,7 +633,7 @@ class MessageContainerWidget(QWidget):
         scrollbar.setValue(scrollbar.maximum())
 
 class ChatWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self,aidee,parent=None):
         super().__init__(parent)
         
         # Main layout
@@ -768,7 +641,7 @@ class ChatWidget(QWidget):
         self.layout.setSpacing(0)  # Reduce spacing between elements
         
         # Messages container
-        self.message_container = MessageContainerWidget()
+        self.message_container = MessageContainerWidget(parent = aidee)
         
         # Scroll area for messages
         self.scroll_area = QScrollArea()

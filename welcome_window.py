@@ -18,6 +18,18 @@ class WelcomeWindow(QMainWindow):
         self.folder_dialog = QFileDialog
         self.file_explorer = FileExplorerWidget
         self.project_manager = ProjectManager(self.folder_dialog, self.file_explorer)
+        # Get the absolute path of the current script
+        default_path = os.path.abspath(os.path.dirname(__file__))
+        icon_path = os.path.join(default_path, "icons", "logo_new.ico")
+        if not os.path.exists(icon_path):
+                print("Icon file does not exist:", icon_path)
+        else:
+                print("Icon file found.")
+        # Set the window icon
+        import ctypes
+        myappid = 'mountain.aidee.0.1v' # arbitrary string
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        self.setWindowIcon(QIcon(icon_path))
         self.setWindowTitle("Visual Studio 2022")
         self.setGeometry(100, 100, 1200, 700)  # Dimensioni aumentate per migliore leggibilità
         

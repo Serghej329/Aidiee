@@ -28,10 +28,38 @@ class TerminalHandler:
         self.commands_lock = threading.Lock()
         self.current_cwd = initial_cwd or os.getcwd()
         self.filtered_messages = [
-            "Microsoft Windows [Version",
-            "(c) Microsoft Corporation. All rights reserved.",
-            "(c) Microsoft Corporation. Tutti i diritti sono riservati."
-        ]
+        # English
+        "Microsoft Windows [Version",
+        "(c) Microsoft Corporation. All rights reserved.",
+
+        # Italian
+        "Microsoft Windows [Versione",
+        "(c) Corporation Microsoft. Tutti i diritti riservati.",
+
+        # Spanish
+        "Microsoft Windows [Versión",
+        "(c) Microsoft Corporation. Reservados todos los derechos.",
+
+        # French
+        "Microsoft Windows [Version",
+        "(c) Microsoft Corporation. Tous droits réservés.",
+
+        # German
+        "Microsoft Windows [Version",
+        "(c) Microsoft Corporation. Alle Rechte vorbehalten.",
+
+        # Chinese Simplified
+        "微软 Windows [版本",
+        "(c) Microsoft Corporation。保留所有权利。",
+
+        # Russian
+        "Microsoft Windows [Версия",
+        "(c) Корпорация Майкрософт. Все права защищены.",
+
+        # Japanese
+        "マイクロソフト Windows [バージョン",
+        "(c) Microsoft Corporation. 無断複製を禁じます。",
+    ]
 
     def _start_terminal(self):
         """Start the terminal process with appropriate settings."""
@@ -70,43 +98,80 @@ class TerminalHandler:
         self.current_cwd = new_cwd
         self._emit_output(OutputType.CWD, new_cwd)
 
-    def _execute_python_script(self, script_name):
-        """Execute a Python script with unbuffered output."""
-        python_executable = "pythonw.exe" if os.name == 'nt' else "python"
+    def _execute_python_script(self, args):
+        """Execute a Python script or inline Python command with streaming output."""
+        python_executable = sys.executable
         
         try:
+            # For -c commands, we need to ensure proper string handling
+            if args.startswith('-c'):
+                # Split into [-c, "actual command"]
+                cmd_parts = args.split(maxsplit=1)
+                if len(cmd_parts) != 2:
+                    raise ValueError("Invalid -c command format")
+                
+                full_command = [python_executable, '-u', '-c', cmd_parts[1][1:len(cmd_parts[1])-1]]
+            else:
+                # For file execution, just split normally
+                full_command = [python_executable, '-u'] + args.split()
+            
+            # Start the Python process
+            print(f"executing command : {full_command}")
             self.current_process = subprocess.Popen(
-                [python_executable, "-u", script_name],
+                full_command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=0,
+                bufsize=1,  # Line buffered
                 universal_newlines=True,
-                cwd=self.current_cwd  # Use current working directory
+                env=dict(os.environ, PYTHONUNBUFFERED='1'),
+                cwd=self.current_cwd
+            )
+
+            # Create event for process completion
+            process_done = threading.Event()
+            
+            def read_stream(stream, output_type):
+                while True:
+                    line = stream.readline()
+                    if not line and self.current_process.poll() is not None:
+                        break
+                    if line:
+                        self._emit_output(output_type, line.rstrip())
+                process_done.set()
+
+            # Start output threads
+            stdout_thread = threading.Thread(
+                target=read_stream,
+                args=(self.current_process.stdout, OutputType.STDOUT),
+                daemon=True
+            )
+            stderr_thread = threading.Thread(
+                target=read_stream,
+                args=(self.current_process.stderr, OutputType.STDERR),
+                daemon=True
             )
             
-            out_thread = threading.Thread(target=self._read_process_output, 
-                                        args=(self.current_process.stdout, OutputType.STDOUT),
-                                        daemon=True)
-            err_thread = threading.Thread(target=self._read_process_output, 
-                                        args=(self.current_process.stderr, OutputType.STDERR),
-                                        daemon=True)
-            out_thread.start()
-            err_thread.start()
-            
+            stdout_thread.start()
+            stderr_thread.start()
+
+            # Wait for process completion
             self.current_process.wait()
             
-            out_thread.join()
-            err_thread.join()
-            self.current_process = None
+            # Wait for output threads to complete
+            process_done.wait(timeout=2)
             
+            # Reset the process
+            self.current_process = None
+
         except Exception as e:
-            self._emit_error(f"Error executing Python script {script_name}: {e}")
+            self._emit_error(f"Error executing Python command: {e}")
             raise
 
     def _execute_terminal_command(self, command):
         """Execute a command directly in the terminal."""
         try:
+            
             # Handle CD commands specially to track directory changes
             if command.lower().startswith('cd '):
                 new_path = command[3:].strip().strip('"').strip("'")
@@ -137,14 +202,12 @@ class TerminalHandler:
     def _read_process_output(self, stream, output_type: OutputType):
         """Read output from a process stream and put it in the output queue."""
         try:
-            while True:
-                line = stream.readline()
-                if not line:
-                    break
-                if line.strip():  # Only process non-empty lines
-                    self._emit_output(output_type, line.strip())
+                for line in iter(stream.readline, ''):
+                        if line.strip():  # Only process non-empty lines
+                                self._emit_output(output_type, line.strip())
         except (ValueError, IOError) as e:
-            self._emit_error(f"Error reading from {output_type.name}: {e}")
+                if not self.stop_event.is_set():  # Only emit error if we're not stopping
+                        self._emit_error(f"Error reading from {output_type.name}: {e}")
 
     def _emit_output(self, type: OutputType, content: str):
         """Put an output message in the queue, filtering out unwanted messages."""
@@ -170,29 +233,36 @@ class TerminalHandler:
     def _command_worker(self):
         """Worker thread that processes commands from the command queue."""
         while not self.stop_event.is_set():
-            try:
-                command = self.command_queue.get(timeout=0.1)
-                if command is None:
-                    break
-                
                 try:
-                    # Special handling for Python scripts
-                    if command.startswith("python "):
-                        script_name = command.split()[1]
-                        self._execute_python_script(script_name)
-                    else:
-                        # Regular command execution
-                        self._execute_terminal_command(command)
-                        
-                except Exception as e:
-                    self._emit_error(f"Command execution failed: {e}")
-                
-                self.command_queue.task_done()
-                with self.commands_lock:
-                    self.commands_pending -= 1
-                    
-            except queue.Empty:
-                continue
+                        command = self.command_queue.get(timeout=0.1)
+                        if command is None:
+                                break
+
+                        try:
+                                # Special handling for Python commands
+                                if command.startswith("python "):
+                                        # Extract the command arguments after `python`
+                                        parts = command.split(maxsplit=1)
+                                        if len(parts) > 1:
+                                                args = parts[1].strip()
+
+                                                # Pass all commands that execute Python to `execute_python_script`
+                                                self._execute_python_script(args)
+                                        else:
+                                                # No arguments; fallback to regular execution
+                                                self._execute_terminal_command(command)
+                                else:
+                                        # Regular command execution for non-Python commands
+                                        self._execute_terminal_command(command)
+
+                        except Exception as e:
+                                self._emit_error(f"Command execution failed: {e}")
+        
+                        self.command_queue.task_done()
+                        with self.commands_lock:
+                                self.commands_pending -= 1
+                except queue.Empty:
+                        continue
 
     def start(self):
         """Start the terminal and command processing thread."""
@@ -283,9 +353,9 @@ def run_test():
     try:
         # Execute test commands
         commands = [
-            "echo Running Python program...",
-            "python loop_program.py",
-            "cd .."
+            'echo Running Python program...',
+            'python -c "print("ciao")"',
+            'cd ..'
         ]
         
         # Queue all commands

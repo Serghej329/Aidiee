@@ -47,7 +47,7 @@ class CombinedDetector:
         self.silence_detected = threading.Event()
         
         # Initialize OpenWakeWord model
-        self.oww_model = Model(wakeword_models=[os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "alexa_v0.1.onnx")], inference_framework="onnx")    
+        self.oww_model = Model(wakeword_models=[os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "Aiidee.onnx")], inference_framework="onnx")    
 
     def get_db(self, audio_data):
         if audio_data.dtype == np.int16:

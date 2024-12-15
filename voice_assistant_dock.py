@@ -91,7 +91,7 @@ class VoiceAssistantDock(QDockWidget):
         """)
 
         # Configura l'area di testo della chat
-        self.chat_text = EnhancedChatWidget()
+        self.chat_text = EnhancedChatWidget(parent=self.ide_instance)
         #self.chat_text.setReadOnly(True)
         #self.chat_text.setMinimumHeight(100)
         # self.chat_text.setStyleSheet("""
