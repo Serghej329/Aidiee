@@ -20,6 +20,10 @@ class CustomTitleBar(StandardTitleBar):
     def create_menus(self):
         default_path = os.path.dirname(__file__)
         print(f"THE DEFAULT PATH IS : {default_path}")
+        
+        # Hide the maximize button
+        self.ide_instance.titleBar.maxBtn.hide()
+        
         # Logo
         logo_label = QLabel(self)
         logo_pixmap = QPixmap(f"{default_path}/icons/logo_new.ico")
@@ -29,66 +33,67 @@ class CustomTitleBar(StandardTitleBar):
         self.menuBar = QMenuBar(self.ide_instance.titleBar)
         
         # File Menu
-        file_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/file-menu.svg"), "")
+        file_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/file-menu.svg"), "File")
         new_file_action = file_menu.addAction(QIcon(f"{default_path}/icons/new-file.svg"), "New File")
         open_project = file_menu.addAction(QIcon(f"{default_path}/icons/open-project.svg"), "Open Project")
         open_project.triggered.connect(lambda: self.ide_instance.project_manager.open_project(self))
         file_menu.addAction(QIcon(f"{default_path}/icons/save.svg"), "Save")
         file_menu.addSeparator()
         file_menu.addAction("Exit")
-
+        
         # Edit Menu
-        edit_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/edit-menu.svg"), "")
+        edit_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/edit-menu.svg"), "Edit")
         edit_menu.addAction(QIcon(f"{default_path}/icons/undo.svg"), "Undo")
         edit_menu.addAction(QIcon(f"{default_path}/icons/redo.svg"), "Redo")
         edit_menu.addSeparator()
         edit_menu.addAction(QIcon(f"{default_path}/icons/cut.svg"), "Cut")
         edit_menu.addAction(QIcon(f"{default_path}/icons/copy.svg"), "Copy")
         edit_menu.addAction(QIcon(f"{default_path}/icons/paste.svg"), "Paste")
-
+        
         # View Menu
-        view_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/view-menu.svg"), "")
+        view_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/view-menu.svg"), "View")
         editor_template_menu = view_menu.addMenu("Editor Template")
-
+        
         styles = ["monokai", "default", "friendly", "fruity", "manni", "paraiso-dark", "solarized-dark"]
         for style_name in styles:
             style_action = QAction(style_name, self)
             style_action.triggered.connect(lambda checked, s=style_name: self.ide_instance.change_style(s))
             editor_template_menu.addAction(style_action)
-
+        
         dock_widget_action = QAction("Toggle Dock Widget", self)
         dock_widget_action.triggered.connect(lambda: self.ide_instance.voice_assistant_dock.toggle_visibility())
         view_menu.addAction(dock_widget_action)
-
-        # Section Menu
-        section_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/section-menu.svg"), "")
-        section_menu.addAction("Add Section")
-        section_menu.addAction("Remove Section")
-
-        # Go Menu
-        go_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/go-menu.svg"), "")
-        go_menu.addAction("Go to Line")
-        go_menu.addAction("Go to Definition")
-
-        # Run Menu
-        run_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/run-menu.svg"), "")
-        run_menu.addAction(QIcon(f"{default_path}/icons/run-menu.svg"), "Run Code")
-        run_menu.addAction(QIcon(f"{default_path}/icons/run-menu.svg"), "Debug Code")
-
-        # Terminal Menu
-        terminal_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/terminal-menu.svg"), "")
-        terminal_menu.addAction("New Terminal")
-        terminal_menu.addAction("Close Terminal")
-
-        # Assistant Menu
-        assistant_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/assistant-menu.svg"), "")
-        assistant_start = assistant_menu.addAction(QIcon(f"{default_path}/icons/start.svg"), "Start Voice detector")
-        assistant_stop = assistant_menu.addAction(QIcon(f"{default_path}/icons/stop.svg"), "Stop Voice detector")
+        
+        # Add Start and Stop actions to View Menu
+        assistant_start = QAction(QIcon(f"{default_path}/icons/start.svg"), "Start Voice detector", self)
+        assistant_stop = QAction(QIcon(f"{default_path}/icons/stop.svg"), "Stop Voice detector", self)
         assistant_start.triggered.connect(self.ide_instance.start_detector)
         assistant_stop.triggered.connect(self.ide_instance.stop_detector)
-
+        view_menu.addAction(assistant_start)
+        view_menu.addAction(assistant_stop)
+        
+        # Section Menu
+        section_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/section-menu.svg"), "Section")
+        section_menu.addAction("Add Section")
+        section_menu.addAction("Remove Section")
+        
+        # Go Menu
+        go_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/go-menu.svg"), "Go")
+        go_menu.addAction("Go to Line")
+        go_menu.addAction("Go to Definition")
+        
+        # Run Menu
+        run_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/run-menu.svg"), "Run")
+        run_menu.addAction(QIcon(f"{default_path}/icons/run-menu.svg"), "Run Code")
+        run_menu.addAction(QIcon(f"{default_path}/icons/run-menu.svg"), "Debug Code")
+        
+        # Terminal Menu
+        terminal_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/terminal-menu.svg"), "Terminal")
+        terminal_menu.addAction("New Terminal")
+        terminal_menu.addAction("Close Terminal")
+        
         # Help Menu
-        help_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/help-menu.svg"), "")
+        help_menu = self.menuBar.addMenu(QIcon(f"{default_path}/icons/help-menu.svg"), "Help")
         help_menu.addAction("Documentation")
         help_menu.addAction("About")
         
@@ -97,8 +102,6 @@ class CustomTitleBar(StandardTitleBar):
         self.ide_instance.titleBar.layout().insertWidget(1, self.menuBar, 1, Qt.AlignCenter)  # Center the menu bar
         self.ide_instance.titleBar.layout().insertStretch(1, 1)
         self.ide_instance.setMenuWidget(self.ide_instance.titleBar)
-
-
 
     def apply_styles(self):
         # Setup Theme
