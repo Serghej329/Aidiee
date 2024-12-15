@@ -157,7 +157,8 @@ class SimpleIDE(FramelessMainWindow):
         self.current_style = style_name
         for index in range(self.tab_widget.count()):
             editor_widget = self.tab_widget.widget(index)
-            editor_widget.set_style(style_name)
+            if isinstance(editor_widget, CodeEditorWidget):
+                editor_widget.set_style(style_name)
 
     def start_detector(self):
         if self.detector_thread and self.detector_thread.isRunning():

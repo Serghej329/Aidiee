@@ -2,7 +2,7 @@ import os
 import shutil
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTreeView, QFileSystemModel,
-    QInputDialog, QMessageBox, QMenu, QItemDelegate
+    QInputDialog, QMessageBox, QMenu
 )
 from PyQt5.QtCore import Qt, QDir
 from python_highlighter import SyntaxThemes 
@@ -59,9 +59,9 @@ class FileExplorerWidget(QWidget):
         layout.addWidget(header)
         # Tree View
         self.tree_view = QTreeView()
-        # tree_item = QItemDelegate()
-        # self.tree_view.setItemDelegate(tree_item)
-        self.tree_view.setCursor(QCursor(Qt.PointingHandCursor))
+        self.tree_view.setMouseTracking(True)
+        self.tree_view.setCursor(QCursor(Qt.ArrowCursor))
+        self.tree_view.viewport().installEventFilter(self)
         self.tree_view.clicked.connect(self.onExplorerClicked)
         self.tree_view.setStyleSheet(f"""
             QTreeView {{
@@ -114,7 +114,20 @@ class FileExplorerWidget(QWidget):
         # Context Menu
         self.tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_view.customContextMenuRequested.connect(self.show_context_menu)
-        
+
+    def eventFilter(self, source, event):
+        if source == self.tree_view.viewport() and event.type() == event.MouseMove:
+            pos = event.pos()
+            index = self.tree_view.indexAt(pos)
+            if index.isValid():
+                file_info = self.model.fileInfo(index)
+                if file_info.isFile() or file_info.isDir():
+                    self.tree_view.setCursor(QCursor(Qt.PointingHandCursor))
+                else:
+                    self.tree_view.setCursor(QCursor(Qt.ArrowCursor))
+            else:
+                self.tree_view.setCursor(QCursor(Qt.ArrowCursor))
+        return super().eventFilter(source, event)
 
         
     def show_context_menu(self, position):
