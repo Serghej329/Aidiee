@@ -422,14 +422,14 @@ class Terminal(QWidget):
                     
                     for output in entry["outputs"]:
                         if output["type"] == "output":
-                            output_content += f'<div style="margin: 4px 0px; white-space: pre-wrap; ">{output["content"].removeprefix(f"{cwd}>")}</div>'
+                            output_content += f'<div style="margin: 4px 0px; white-space: pre-wrap; ">{output["content"].removeprefix(f"{cwd.replace('/','\\')}>")}</div>'
                         elif output["type"] == "error":
-                            output_content += f'<br><span style="color: {self.config["error_color"]}">{output["content"]}</span>'
+                            output_content += f'<br><span style="color: {self.config["error_color"]}">{output["content"].removeprefix(f"{cwd.replace('/','\\')}>")}</span>'
                 
                 elif entry["type"] == "output":
-                    output_content += f'<div style="margin: 4px 0px; white-space: pre-wrap; ">{entry["content"]}</div>'
+                    output_content += f'<div style="margin: 4px 0px; white-space: pre-wrap; ">{entry["content"].removeprefix(f"{cwd.replace('/','\\')}>")}</div>'
                 elif entry["type"] == "error":
-                    output_content += f'<span style="color: {self.config["error_color"]}">{entry["content"]}</span>'
+                    output_content += f'<span style="color: {self.config["error_color"]}">{entry["content"].removeprefix(f"{cwd.replace('/','\\')}>")}</span>'
 
 
         self.output_text_edit.setHtml(output_content)

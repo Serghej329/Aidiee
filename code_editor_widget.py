@@ -15,7 +15,7 @@ class PygmentsHighlighter(QSyntaxHighlighter):
         self.lexer = lexer
         self.theme_colors = theme_colors
         self.formats = {}
-        
+
         # Map Pygments token types to theme colors
         self.token_color_map = {
             'Keyword': 'import',
@@ -32,7 +32,7 @@ class PygmentsHighlighter(QSyntaxHighlighter):
 
 
 class CodeEditorWidget(QWidget):
-    def __init__(self, filename=None, language=None, parent=None):
+    def __init__(self, filename, language, parent=None):
         super().__init__(parent)
         self.current_language = language
         self.current_highlighter = None
@@ -43,23 +43,25 @@ class CodeEditorWidget(QWidget):
         self.set_style('Tokyo Night')
         
         # Set the highlighter based on filename or language
-        if filename:
+        if filename and not self.current_language:
             self.set_language(filename=filename)
-        elif language:
-            self.set_language(language=language)
         else:
-            print("No language or filename provided, no highlighter set.")
+            print("Warning: No language or filename provided, no highlighter set.")
         
     def setup_ui(self):
-        print("setupping ")
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        
         self.code_editor = NeumorphicTextEdit()
         self.code_editor.setFont(QFont("Fira Code", 12))
         self.selection_color = ""
+        
         # Add line numbers
         self.line_numbers = LineNumbers(self.code_editor, parent=self)
         editor_layout = QHBoxLayout()
         editor_layout.setContentsMargins(0, 0, 0, 0)
+        self.setContentsMargins(0, 0, 0, 0)
         editor_layout.setSpacing(0)
         editor_layout.addWidget(self.line_numbers)
         editor_layout.addWidget(self.code_editor)
@@ -86,20 +88,12 @@ class CodeEditorWidget(QWidget):
             
     def set_language(self, language=None, filename=None):
         """Set the appropriate highlighter based on language or filename"""
-        if language:
-                try:
-                        self.current_language = language.lower()
-                        lexer = get_lexer_by_name(language)
-                except:
-                        print(f"error checking lexer for name : {language}")
-        elif filename:
+        if filename:
                 try:
                         lexer = get_lexer_for_filename(filename)
                         self.current_language = lexer.name.lower()
                 except:
                         print(f"error checking lexer for filename : {filename}")  
-        else:
-            self.current_language = None
         
         # Remove existing highlighter if any
         if self.current_highlighter:
@@ -108,7 +102,6 @@ class CodeEditorWidget(QWidget):
         
         if self.current_language == 'python':
             # Use Tree-sitter based highlighter for Python
-            print("using tree sitter")
             self.current_highlighter = SyntaxFormatter(
                 self.code_editor.document(),
                 self.current_theme
@@ -116,7 +109,6 @@ class CodeEditorWidget(QWidget):
         elif self.current_language:
             # Use Pygments based highlighter for other languages
             try:
-                print("using pygments")
                 lexer = get_lexer_by_name(self.current_language)
                 self.current_highlighter = PygmentsHighlighter(
                     self.code_editor.document(),
@@ -185,9 +177,6 @@ class CodeEditorWidget(QWidget):
             if self.current_language:
                 self.set_language(language=self.current_language)
         
-        # Force immediate rehighlighting
-        if self.current_highlighter:
-            self.current_highlighter.rehighlight_now()
 
     def blinkLine(self, line_number, blink_color):
         self.line_numbers.goToLine(line_number)

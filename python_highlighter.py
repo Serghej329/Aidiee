@@ -22,7 +22,7 @@ class SyntaxThemes:
             'background': '#1f2335',
             'foreground': '#a9b1d6',
             'self': '#b4f9f8',
-            'error': '#ff0000',
+            'error': '#c53b53',
             'decorator': '#ff007c',
             'import': '#bb9af7',
             'as': '#bb9af7',

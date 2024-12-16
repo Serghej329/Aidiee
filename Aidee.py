@@ -1,3 +1,4 @@
+from signal import set_wakeup_fd
 import sys
 import os
 import asyncio
@@ -5,7 +6,7 @@ import json
 import ctypes
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QTabWidget, QFileDialog, QFrame
+    QWidget, QVBoxLayout, QTabWidget, QFileDialog
 )
 from PyQt5.QtCore import Qt, QSize, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
@@ -69,8 +70,7 @@ class SimpleIDE(FramelessMainWindow):
         icon_path = os.path.join(default_path, "icons", "logo_new.ico")
         if not os.path.exists(icon_path):
                 print("Icon file does not exist:", icon_path)
-        else:
-                print("Icon file found.")
+
         # Set the window icon
         self.setWindowIcon(QIcon(icon_path))
         # Creating modules objects
@@ -86,70 +86,55 @@ class SimpleIDE(FramelessMainWindow):
         self.titleBar.raise_()
 
     def setup_ui(self):
-        # Creazione del widget centrale
         self.central_widget = QWidget()
         self.central_widget.setObjectName("centralWidget")
+        self.central_widget.setContentsMargins(0, 0, 0, 0)
+        # Set central widget
         self.setCentralWidget(self.central_widget)
-
-        # Layout principale
         main_layout = QVBoxLayout(self.central_widget)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Setup della barra del titolo personalizzata
+        # Setup custom titlebar
         self.custom_titlebar = CustomTitleBar(ide_instance=self)
-
-        # Creazione del QSplitter orizzontale principale
+        # Create main horizontal splitter
         self.h_splitter = CosmicSplitter(Qt.Horizontal)
-
-        # Aggiunta del file explorer al QSplitter orizzontale
+        # Add the file explorer to the splitter
         self.h_splitter.addWidget(self.file_explorer)
-
-        # Creazione del QSplitter verticale principale
+        # Create main vertical splitter
         self.v_splitter = CosmicSplitter(Qt.Vertical)
-
-        # Configurazione del QTabWidget
+        # Setting the tab widget
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.tabCloseRequested.connect(lambda index: self.close_tab(index))
-
-        # Aggiunta del QTabWidget al QSplitter verticale
+        # Adding the tab widget to the vertical main splitter
         self.v_splitter.addWidget(self.tab_widget)
-
-        # Creazione del terminale personalizzato
+        self.v_splitter.setContentsMargins(0, 0, 0, 0)
+        # Create the custom terminal widget from terminal_module.py
         self.terminal = Terminal(
             parent=self,
             initial_height=200,
-            initial_cwd=self.project_path
+            initial_cwd = self.project_path
         )
-
-        # Aggiunta del terminale al QSplitter verticale
+        # Add the terminal to the vertical splitter
         self.v_splitter.addWidget(self.terminal)
-
-        # Impostazione delle dimensioni iniziali del QSplitter verticale
-        self.v_splitter.setSizes([800, 200])
-
-        # Aggiunta del QSplitter verticale al QSplitter orizzontale
+        # Set sizes for the vertical splitter
+        self.v_splitter.setSizes([600, 200])
+        # Add the vertical splitter to the horizontal splitter
         self.h_splitter.addWidget(self.v_splitter)
-
-        # Impostazione delle dimensioni iniziali del QSplitter orizzontale
+        # Set sizes for the horizontal splitter
         self.h_splitter.setSizes([250, self.width() - 250])
-
-        # Aggiunta del QSplitter orizzontale al layout principale
+        # Adding the horizontal splitter with the vertical splitter inside to the main layout
         main_layout.addWidget(self.h_splitter)
-
-        # Impostazione dello stile predefinito per l'editor di codice (Tokyo Night)
+        # Set default style for the code editor(monokai)
         self.change_style()
-
-        # Creazione del dock per l'assistente vocale e aggiunta alla finestra principale
+        # Create the voice assistant dock object and add it to the main window
         self.voice_assistant_dock = VoiceAssistantDock(ide_instance=self)
         self.addDockWidget(Qt.RightDockWidgetArea, self.voice_assistant_dock)
 
-        # Inizializzazione del rilevatore vocale e del thread
+        # Initialize detector and thread
         self.detector = CombinedDetector(whisper_model_version="base")
         self.detector_thread = None
 
-        # Inizializzazione del dizionario delle schede
         self.tabs = tabs_dictionary()
 
 
@@ -157,8 +142,7 @@ class SimpleIDE(FramelessMainWindow):
         self.current_style = style_name
         for index in range(self.tab_widget.count()):
             editor_widget = self.tab_widget.widget(index)
-            if isinstance(editor_widget, CodeEditorWidget):
-                editor_widget.set_style(style_name)
+            editor_widget.set_style(style_name)
 
     def start_detector(self):
         if self.detector_thread and self.detector_thread.isRunning():
@@ -213,11 +197,12 @@ class SimpleIDE(FramelessMainWindow):
 
     def add_file_to_tabs(self, file_path):
         if os.path.splitext(file_path)[1] == ".py":
-            editor_widget = CodeEditorWidget()
             with open(file_path, "r", encoding="utf8") as f:
                 file_content = f.read()
             file_name = os.path.basename(file_path)
+            editor_widget = CodeEditorWidget(filename=file_name, language="python", parent=self)
             editor_widget.set_content(file_content,file_name)
+            editor_widget.setContentsMargins(0, 0, 0, 0)
             if not self.tabs.tab_exists(file_name):
                 self.tab_widget.addTab(editor_widget, file_name)
                 self.tabs.add_tab(file_name, path=file_path, index=self.tab_widget.count())
